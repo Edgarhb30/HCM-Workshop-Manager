@@ -1,0 +1,1 @@
+export default function ComingSoon({title}){return <section className="panel coming"><span className="eyebrow">PRÓXIMO MÓDULO</span><h2>{title}</h2><p>La estructura ya está preparada. Este módulo se construirá en la siguiente etapa del proyecto.</p></section>}
