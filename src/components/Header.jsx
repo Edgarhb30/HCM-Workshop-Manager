@@ -11,6 +11,7 @@ const roleNames = {
 export default function Header({
   title,
   email,
+  userName,
   workshop,
   role,
   logout,
@@ -31,7 +32,8 @@ export default function Header({
 
       <div className="user">
         <div className="user-identity">
-          <span>{email}</span>
+          <span>{userName || email}</span>
+          {userName && <small>{email}</small>}
           <small>{roleNames[role] || role}</small>
         </div>
         <button className="icon" type="button" title="Cerrar sesión" onClick={logout}>

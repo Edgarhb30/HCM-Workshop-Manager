@@ -18,7 +18,7 @@ const localToday = () =>
 const dateDiff = date =>
   Math.ceil((new Date(`${date}T23:59:59`) - new Date()) / 86400000)
 
-export default function Dashboard() {
+export default function Dashboard({ userName, workshop }) {
   const [stats, setStats] = useState({
     today: 0,
     bikesInShop: 0,
@@ -203,8 +203,8 @@ export default function Dashboard() {
   return (
     <>
       <section className="dashboard-welcome">
-        <span className="eyebrow">HERRERA CUSTOM MOTORCYCLE</span>
-        <h1>Buenos días, Edgar 👋</h1>
+        <span className="eyebrow">{workshop?.name || 'HCM WORKSHOP MANAGER'}</span>
+        <h1>Buenos días, {userName || 'equipo'} 👋</h1>
         <p>Aquí tienes el resumen de lo que está pasando hoy en el taller.</p>
       </section>
 

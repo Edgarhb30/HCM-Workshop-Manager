@@ -87,6 +87,8 @@ export default function App() {
         .select(`
           role,
           active,
+          display_name,
+          email,
           workshop:workshops(id, name, slug, timezone, currency, active)
         `)
         .eq('user_id', session.user.id)
@@ -176,7 +178,12 @@ export default function App() {
   }
 
   const pages = {
-    dashboard: <Dashboard />,
+    dashboard: (
+      <Dashboard
+        userName={membership.display_name || session.user.email?.split('@')[0]}
+        workshop={membership.workshop}
+      />
+    ),
     agenda: <Agenda onReceive={receiveAppointment} />,
     clientes: <Customers />,
     motos: <Motorcycles />,
@@ -242,6 +249,7 @@ export default function App() {
         <Header
           title={titles[page]}
           email={session.user.email}
+          userName={membership.display_name}
           workshop={membership.workshop}
           role={membership.role}
           openMenu={() => setMenu(true)}
