@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { BadgeCheck, Landmark, Save, ShieldCheck } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import locations from '../data/costaRicaLocations.json'
 
 const emptyForm = {
   environment: 'test', issuer_name: '', identification_type: '01', identification_number: '',
   economic_activity_code: '', economic_activity_name: '', province_code: '', canton_code: '',
   district_code: '', neighborhood_code: '', other_signs: '', phone_country_code: '506',
   phone_number: '', email: '', branch_code: '001', terminal_code: '00001',
+  last_invoice_consecutive: '0',
   default_labor_cabys: '', default_parts_cabys: '', enabled: false,
   credentials_configured: false, signing_key_configured: false
 }
@@ -17,6 +19,9 @@ export default function FiscalSettings({ workshop, role }) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const selectedProvince = useMemo(() => locations.find(item => item.code === form.province_code), [form.province_code])
+  const selectedCanton = useMemo(() => selectedProvince?.cantons.find(item => item.code === form.canton_code), [selectedProvince, form.canton_code])
+  const selectedDistrict = useMemo(() => selectedCanton?.districts.find(item => item.code === form.district_code), [selectedCanton, form.district_code])
 
   useEffect(() => { load() }, [workshop?.id])
 
@@ -32,6 +37,17 @@ export default function FiscalSettings({ workshop, role }) {
   function update(field, value) {
     setSaved(false)
     setForm(current => ({ ...current, [field]: value }))
+  }
+
+  function updateLocation(level, value) {
+    setSaved(false)
+    setForm(current => ({
+      ...current,
+      province_code: level === 'province' ? value : current.province_code,
+      canton_code: level === 'province' ? '' : level === 'canton' ? value : current.canton_code,
+      district_code: ['province', 'canton'].includes(level) ? '' : level === 'district' ? value : current.district_code,
+      neighborhood_code: ['province', 'canton', 'district'].includes(level) ? '' : value
+    }))
   }
 
   async function save() {
@@ -68,6 +84,7 @@ export default function FiscalSettings({ workshop, role }) {
       email: form.email.trim().toLowerCase(),
       branch_code: form.branch_code.padStart(3, '0'),
       terminal_code: form.terminal_code.padStart(5, '0'),
+      last_invoice_consecutive: Number(form.last_invoice_consecutive || 0),
       default_labor_cabys: form.default_labor_cabys.replace(/[^0-9]/g, '') || null,
       default_parts_cabys: form.default_parts_cabys.replace(/[^0-9]/g, '') || null,
       enabled: false,
@@ -94,12 +111,13 @@ export default function FiscalSettings({ workshop, role }) {
           <label>Número de identificación<input disabled={!canEdit} required inputMode="numeric" value={form.identification_number} onChange={event => update('identification_number', event.target.value)} /></label>
           <label>Código de actividad económica<input disabled={!canEdit} required inputMode="numeric" value={form.economic_activity_code} onChange={event => update('economic_activity_code', event.target.value)} /></label>
           <label>Nombre de la actividad<input disabled={!canEdit} value={form.economic_activity_name} onChange={event => update('economic_activity_name', event.target.value)} /></label>
-          <label>Provincia (1 dígito)<input disabled={!canEdit} required maxLength="1" value={form.province_code} onChange={event => update('province_code', event.target.value)} /></label>
-          <label>Cantón (2 dígitos)<input disabled={!canEdit} required maxLength="2" value={form.canton_code} onChange={event => update('canton_code', event.target.value)} /></label>
-          <label>Distrito (2 dígitos)<input disabled={!canEdit} required maxLength="2" value={form.district_code} onChange={event => update('district_code', event.target.value)} /></label>
-          <label>Barrio (opcional, 2 dígitos)<input disabled={!canEdit} maxLength="2" value={form.neighborhood_code} onChange={event => update('neighborhood_code', event.target.value)} /></label>
+          <label>Provincia<select disabled={!canEdit} required value={form.province_code} onChange={event => updateLocation('province', event.target.value)}><option value="">Selecciona la provincia</option>{locations.map(item => <option key={item.code} value={item.code}>{item.name}</option>)}</select></label>
+          <label>Cantón<select disabled={!canEdit || !selectedProvince} required value={form.canton_code} onChange={event => updateLocation('canton', event.target.value)}><option value="">Selecciona el cantón</option>{selectedProvince?.cantons.map(item => <option key={item.code} value={item.code}>{item.name}</option>)}</select></label>
+          <label>Distrito<select disabled={!canEdit || !selectedCanton} required value={form.district_code} onChange={event => updateLocation('district', event.target.value)}><option value="">Selecciona el distrito</option>{selectedCanton?.districts.map(item => <option key={item.code} value={item.code}>{item.name}</option>)}</select></label>
+          <label>Barrio o poblado<select disabled={!canEdit || !selectedDistrict} value={form.neighborhood_code || ''} onChange={event => updateLocation('neighborhood', event.target.value)}><option value="">Sin especificar</option>{selectedDistrict?.neighborhoods.map(item => <option key={item.code} value={item.code}>{item.name}</option>)}</select></label>
           <label>Sucursal<input disabled={!canEdit} required maxLength="3" value={form.branch_code} onChange={event => update('branch_code', event.target.value)} /></label>
           <label>Caja / terminal<input disabled={!canEdit} required maxLength="5" value={form.terminal_code} onChange={event => update('terminal_code', event.target.value)} /></label>
+          <label>Último consecutivo de factura<input disabled={!canEdit} required inputMode="numeric" maxLength="10" value={String(form.last_invoice_consecutive).padStart(10, '0')} onChange={event => update('last_invoice_consecutive', event.target.value.replace(/[^0-9]/g, '').slice(-10))} /><small>La siguiente factura usará el número posterior.</small></label>
           <label>Indicativo telefónico<input disabled={!canEdit} required value={form.phone_country_code} onChange={event => update('phone_country_code', event.target.value)} /></label>
           <label>Teléfono<input disabled={!canEdit} required value={form.phone_number} onChange={event => update('phone_number', event.target.value)} /></label>
           <label>Correo fiscal<input disabled={!canEdit} required type="email" value={form.email} onChange={event => update('email', event.target.value)} /></label>
