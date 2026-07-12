@@ -184,9 +184,9 @@ export default function App() {
         workshop={membership.workshop}
       />
     ),
-    agenda: <Agenda onReceive={receiveAppointment} />,
-    clientes: <Customers />,
-    motos: <Motorcycles />,
+    agenda: <Agenda onReceive={receiveAppointment} role={membership.role} />,
+    clientes: <Customers role={membership.role} />,
+    motos: <Motorcycles role={membership.role} />,
     recepcion: (
       <Reception
         initialAppointment={receptionAppointment}
@@ -194,10 +194,10 @@ export default function App() {
         workshop={membership.workshop}
       />
     ),
-    ordenes: <WorkOrders workshop={membership.workshop} branding={branding} />,
-    presupuestos: <Quotes workshop={membership.workshop} branding={branding} />,
-    facturas: <Invoices workshop={membership.workshop} branding={branding} />,
-    inventario: <Inventory />,
+    ordenes: <WorkOrders workshop={membership.workshop} branding={branding} role={membership.role} />,
+    presupuestos: <Quotes workshop={membership.workshop} branding={branding} role={membership.role} />,
+    facturas: <Invoices workshop={membership.workshop} branding={branding} role={membership.role} />,
+    inventario: <Inventory role={membership.role} />,
     reportes: <Reports />,
     equipo: <Team workshop={membership.workshop} currentRole={membership.role} />,
     configuracion: (

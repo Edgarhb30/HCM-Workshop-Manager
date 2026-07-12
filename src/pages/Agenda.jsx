@@ -9,7 +9,8 @@ import { supabase } from '../lib/supabase'
 
 const statuses = ['Pendiente', 'Confirmada', 'Cancelada', 'Completada']
 
-export default function Agenda({ onReceive }) {
+export default function Agenda({ onReceive, role }) {
+  const canManage = ['owner', 'admin', 'reception'].includes(role)
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -118,13 +119,13 @@ export default function Agenda({ onReceive }) {
 
               <div className="appointment-actions agenda-actions">
                 <span className={`pill ${appointment.status.toLowerCase()}`}>{appointment.status}</span>
-                <select value={appointment.status} onChange={event => updateStatus(appointment.id, event.target.value)}>
+                <select value={appointment.status} disabled={!canManage} onChange={event => updateStatus(appointment.id, event.target.value)}>
                   {statuses.map(status => <option key={status}>{status}</option>)}
                 </select>
                 <a className="icon-action whatsapp" href={whatsappLink(appointment)} target="_blank" rel="noreferrer" title="Contactar por WhatsApp">
                   <MessageCircle size={18} />
                 </a>
-                {!['Cancelada', 'Completada'].includes(appointment.status) && (
+                {canManage && !['Cancelada', 'Completada'].includes(appointment.status) && (
                   <button className="primary compact" type="button" onClick={() => onReceive(appointment)}>
                     <Wrench size={17} />Recibir moto
                   </button>

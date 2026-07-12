@@ -33,7 +33,8 @@ const invoiceSelect = `
   quote:quotes(quote_number)
 `
 
-export default function Invoices({ workshop = null, branding = null }) {
+export default function Invoices({ workshop = null, branding = null, role }) {
+  const canManage = ['owner', 'admin', 'reception'].includes(role)
   const [invoices, setInvoices] = useState([])
   const [approvedQuotes, setApprovedQuotes] = useState([])
   const [search, setSearch] = useState('')
@@ -224,10 +225,10 @@ export default function Invoices({ workshop = null, branding = null }) {
             <h2>Facturas y pagos</h2>
             <p className="muted">Control interno del taller. No sustituye el comprobante electrónico de Hacienda.</p>
           </div>
-          <button className="primary compact" type="button" onClick={() => setShowCreate(!showCreate)}>
+          {canManage && <button className="primary compact" type="button" onClick={() => setShowCreate(!showCreate)}>
             {showCreate ? <X size={18} /> : <Plus size={18} />}
             {showCreate ? 'Cerrar' : 'Nueva factura'}
-          </button>
+          </button>}
         </div>
 
         <div className="invoice-summary">
@@ -237,7 +238,7 @@ export default function Invoices({ workshop = null, branding = null }) {
           <article><FileCheck2 size={21} /><span>Facturas abiertas</span><strong>{summary.open}</strong></article>
         </div>
 
-        {showCreate && (
+        {canManage && showCreate && (
           <form className="invoice-create-form" onSubmit={createInvoice}>
             <label>Presupuesto aprobado
               <select required value={selectedQuote} onChange={event => setSelectedQuote(event.target.value)}>
@@ -296,7 +297,7 @@ export default function Invoices({ workshop = null, branding = null }) {
 
             <button className="print-document-action" type="button" onClick={() => printInvoiceDocument({ invoice: selected, workshop, branding })}><Printer size={18} />Imprimir factura / Guardar PDF</button>
 
-            {!['Pagada', 'Anulada'].includes(selected.status) && (
+            {canManage && !['Pagada', 'Anulada'].includes(selected.status) && (
               <form className="payment-form" onSubmit={registerPayment}>
                 <h3>Registrar pago</h3>
                 <label>Monto<input required type="number" min="1" max={Number(selected.total) - Number(selected.amount_paid)} value={payment.amount} onChange={event => setPayment({ ...payment, amount: event.target.value })} /></label>
@@ -319,7 +320,7 @@ export default function Invoices({ workshop = null, branding = null }) {
             )}
 
             {selected.work_order?.customer?.phone && <a className="whatsapp-action" href={whatsappLink(selected)} target="_blank" rel="noreferrer"><MessageCircle size={18} />Enviar resumen por WhatsApp</a>}
-            {selected.status !== 'Anulada' && Number(selected.amount_paid) === 0 && <button className="cancel-invoice" type="button" onClick={() => cancelInvoice(selected)}>Anular factura</button>}
+            {canManage && selected.status !== 'Anulada' && Number(selected.amount_paid) === 0 && <button className="cancel-invoice" type="button" onClick={() => cancelInvoice(selected)}>Anular factura</button>}
           </aside>
         </div>
       )}

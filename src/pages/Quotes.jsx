@@ -34,7 +34,9 @@ const todayPlus = days => {
   return date.toISOString().slice(0, 10)
 }
 
-export default function Quotes({ workshop = null, branding = null }) {
+export default function Quotes({ workshop = null, branding = null, role }) {
+  const canManage = ['owner', 'admin', 'reception'].includes(role)
+  const canConsumeInventory = ['owner', 'admin'].includes(role)
   const [quotes, setQuotes] = useState([])
   const [orders, setOrders] = useState([])
   const [products, setProducts] = useState([])
@@ -326,13 +328,13 @@ export default function Quotes({ workshop = null, branding = null }) {
             <h2>Cotizaciones del taller</h2>
             <p className="muted">Mano de obra, repuestos, descuentos e impuestos vinculados a cada OT.</p>
           </div>
-          <button className="primary compact" type="button" onClick={() => setShowForm(!showForm)}>
+          {canManage && <button className="primary compact" type="button" onClick={() => setShowForm(!showForm)}>
             {showForm ? <X size={18} /> : <Plus size={18} />}
             {showForm ? 'Cerrar' : 'Nuevo presupuesto'}
-          </button>
+          </button>}
         </div>
 
-        {showForm && (
+        {canManage && showForm && (
           <form className="quote-form" onSubmit={saveQuote}>
             <label className="wide">Orden de trabajo
               <select required value={form.work_order_id} onChange={event => setForm({ ...form, work_order_id: event.target.value })}>
@@ -415,7 +417,7 @@ export default function Quotes({ workshop = null, branding = null }) {
             <p className="muted">{selected.work_order?.order_number} · {selected.work_order?.customer?.full_name}<br />{selected.work_order?.motorcycle?.brand} {selected.work_order?.motorcycle?.model}</p>
 
             <label className="order-status-control">Estado
-              <select value={selected.status} onChange={event => updateStatus(selected, event.target.value)}>
+              <select value={selected.status} disabled={!canManage} onChange={event => updateStatus(selected, event.target.value)}>
                 <option>Borrador</option><option>Enviado</option><option>Aprobado</option><option>Rechazado</option>
               </select>
             </label>
@@ -442,7 +444,7 @@ export default function Quotes({ workshop = null, branding = null }) {
 
             <button className="print-document-action" type="button" onClick={() => printQuoteDocument({ quote: selected, workshop, branding })}><Printer size={18} />Imprimir presupuesto / Guardar PDF</button>
 
-            {selected.status === 'Aprobado' && (selected.items || []).some(item => item.product_id && !item.inventory_deducted) && (
+            {canConsumeInventory && selected.status === 'Aprobado' && (selected.items || []).some(item => item.product_id && !item.inventory_deducted) && (
               <button
                 className="consume-inventory-button"
                 type="button"

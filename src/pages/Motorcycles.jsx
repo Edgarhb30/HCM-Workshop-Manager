@@ -68,7 +68,9 @@ const formatDate = value =>
       )
     : '—'
 
-export default function Motorcycles() {
+export default function Motorcycles({ role }) {
+  const canManageMotorcycles = ['owner', 'admin', 'reception'].includes(role)
+  const canRegisterMaintenance = ['owner', 'admin', 'mechanic'].includes(role)
   const [rows, setRows] = useState([])
   const [customers, setCustomers] = useState([])
   const [search, setSearch] = useState('')
@@ -292,12 +294,12 @@ export default function Motorcycles() {
             <h2>Expedientes técnicos</h2>
             <p className="muted">Historial del taller y control de cambios de aceite.</p>
           </div>
-          <button className="primary compact" type="button" onClick={() => setShow(!show)}>
+          {canManageMotorcycles && <button className="primary compact" type="button" onClick={() => setShow(!show)}>
             <Plus size={18} />Nueva moto
-          </button>
+          </button>}
         </div>
 
-        {show && (
+        {canManageMotorcycles && show && (
           <form className="inline-form" onSubmit={save}>
             <label>Propietario
               <select required value={form.customer_id} onChange={event => setForm({ ...form, customer_id: event.target.value })}>
@@ -363,9 +365,9 @@ export default function Motorcycles() {
                 <section className="record-section oil-overview">
                   <div className="record-title">
                     <div><Droplets size={22} /><div><h3>Control de aceite</h3><p>Historial y próximo cambio</p></div></div>
-                    <button className="primary compact" type="button" onClick={() => setShowOilForm(!showOilForm)}>
+                    {canRegisterMaintenance && <button className="primary compact" type="button" onClick={() => setShowOilForm(!showOilForm)}>
                       <Plus size={17} />Registrar cambio
-                    </button>
+                    </button>}
                   </div>
 
                   {lastOilChange ? (
@@ -376,7 +378,7 @@ export default function Motorcycles() {
                     </div>
                   ) : <div className="empty compact-empty">Todavía no hay cambios de aceite registrados.</div>}
 
-                  {showOilForm && (
+                  {canRegisterMaintenance && showOilForm && (
                     <form className="oil-form" onSubmit={saveOilChange}>
                       <label>Fecha<input required type="date" value={oilForm.change_date} onChange={event => setOilForm({ ...oilForm, change_date: event.target.value })} /></label>
                       <label>Kilometraje<input required type="number" min="0" value={oilForm.mileage} onChange={event => setOilForm({ ...oilForm, mileage: event.target.value })} /></label>
@@ -407,9 +409,9 @@ export default function Motorcycles() {
                 <section className="record-section maintenance-overview">
                   <div className="record-title">
                     <div><Wrench size={22} /><div><h3>Historial de mantenimiento</h3><p>Servicios, repuestos y próximos trabajos</p></div></div>
-                    <button className="primary compact" type="button" onClick={() => setShowMaintenanceForm(!showMaintenanceForm)}>
+                    {canRegisterMaintenance && <button className="primary compact" type="button" onClick={() => setShowMaintenanceForm(!showMaintenanceForm)}>
                       <Plus size={17} />Registrar servicio
-                    </button>
+                    </button>}
                   </div>
 
                   {!!latestMaintenance.length && (
@@ -423,7 +425,7 @@ export default function Motorcycles() {
                     </div>
                   )}
 
-                  {showMaintenanceForm && (
+                  {canRegisterMaintenance && showMaintenanceForm && (
                     <form className="maintenance-form" onSubmit={saveMaintenance}>
                       <label>Tipo de servicio<select required value={maintenanceForm.service_type} onChange={event => setMaintenanceForm({ ...maintenanceForm, service_type: event.target.value })}><option value="">Seleccionar…</option>{serviceTypes.map(item => <option key={item}>{item}</option>)}</select></label>
                       <label>Fecha<input required type="date" value={maintenanceForm.service_date} onChange={event => setMaintenanceForm({ ...maintenanceForm, service_date: event.target.value })} /></label>

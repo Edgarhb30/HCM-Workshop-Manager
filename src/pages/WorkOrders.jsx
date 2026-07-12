@@ -36,7 +36,9 @@ const formatDate = value => value
   ? new Intl.DateTimeFormat('es-CR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
   : '—'
 
-export default function WorkOrders({ workshop = null, branding = null }) {
+export default function WorkOrders({ workshop = null, branding = null, role }) {
+  const canEdit = ['owner', 'admin', 'reception', 'mechanic'].includes(role)
+  const canDeliver = ['owner', 'admin', 'reception'].includes(role)
   const [orders, setOrders] = useState([])
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('Todas')
@@ -427,12 +429,12 @@ export default function WorkOrders({ workshop = null, branding = null }) {
             </div>
 
             <label className="order-status-control">Estado actual
-              <select value={selected.status} disabled={selected.status === 'Entregada'} onChange={event => updateStatus(selected, event.target.value)}>
+              <select value={selected.status} disabled={!canEdit || selected.status === 'Entregada'} onChange={event => updateStatus(selected, event.target.value)}>
                 {(selected.status === 'Entregada' ? statuses : editableStatuses).map(item => <option key={item}>{item}</option>)}
               </select>
             </label>
 
-            {['Lista para entregar', 'Prueba'].includes(selected.status) && !delivery && (
+            {canDeliver && ['Lista para entregar', 'Prueba'].includes(selected.status) && !delivery && (
               <button className="delivery-launch" type="button" onClick={() => prepareDelivery(selected)}>
                 <ClipboardCheck size={21} />
                 <span><strong>Entregar motocicleta</strong><small>Registrar salida, conformidad y firma.</small></span>
@@ -456,12 +458,13 @@ export default function WorkOrders({ workshop = null, branding = null }) {
               <p className="muted">Este contenido es privado para el taller.</p>
               <textarea
                 className="order-notes"
+                readOnly={!canEdit}
                 rows="7"
                 placeholder="Pruebas realizadas, resultados, diagnóstico, repuestos necesarios y próximos pasos."
                 value={notes}
                 onChange={event => setNotes(event.target.value)}
               />
-              <button
+              {canEdit && <button
                 className="primary compact"
                 type="button"
                 disabled={savingNotes}
@@ -469,17 +472,17 @@ export default function WorkOrders({ workshop = null, branding = null }) {
               >
                 <Save size={18} />
                 {savingNotes ? 'Guardando...' : 'Guardar notas'}
-              </button>
+              </button>}
             </section>
 
             <section className="detail-section order-timeline-section">
               <h3><History size={19} /> Línea de tiempo</h3>
-              <form className="timeline-form" onSubmit={addTimelineEvent}>
+              {canEdit && <form className="timeline-form" onSubmit={addTimelineEvent}>
                 <input required placeholder="Título del evento" value={eventForm.title} onChange={event => setEventForm({ ...eventForm, title: event.target.value })} />
                 <textarea rows="2" placeholder="Detalle u observación" value={eventForm.description} onChange={event => setEventForm({ ...eventForm, description: event.target.value })} />
                 <label><input type="checkbox" checked={eventForm.client_visible} onChange={event => setEventForm({ ...eventForm, client_visible: event.target.checked })} />Visible para el cliente</label>
                 <button className="secondary" disabled={savingEvent}>{savingEvent ? 'Guardando…' : 'Agregar evento'}</button>
-              </form>
+              </form>}
               <div className="order-timeline">
                 {orderEvents.map(item => (
                   <article key={item.id}>

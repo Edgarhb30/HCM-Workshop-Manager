@@ -40,7 +40,9 @@ const money = value =>
     maximumFractionDigits: 0
   }).format(Number(value || 0))
 
-export default function Inventory() {
+export default function Inventory({ role }) {
+  const canManageProducts = ['owner', 'admin'].includes(role)
+  const canRegisterMovements = ['owner', 'admin', 'mechanic'].includes(role)
   const [products, setProducts] = useState([])
   const [orders, setOrders] = useState([])
   const [search, setSearch] = useState('')
@@ -216,10 +218,10 @@ export default function Inventory() {
             <h2>Repuestos y consumibles</h2>
             <p className="muted">Control de existencias, costos, precios y movimientos por OT.</p>
           </div>
-          <button className="primary compact" type="button" onClick={() => setShowForm(!showForm)}>
+          {canManageProducts && <button className="primary compact" type="button" onClick={() => setShowForm(!showForm)}>
             {showForm ? <X size={18} /> : <Plus size={18} />}
             {showForm ? 'Cerrar' : 'Nuevo producto'}
-          </button>
+          </button>}
         </div>
 
         <div className="inventory-summary">
@@ -229,7 +231,7 @@ export default function Inventory() {
           <article><Package size={21} /><span>Valor al costo</span><strong>{money(summary.value)}</strong></article>
         </div>
 
-        {showForm && (
+        {canManageProducts && showForm && (
           <form className="inventory-form" onSubmit={saveProduct}>
             <label>Código / SKU<input value={productForm.sku} onChange={event => setProductForm({ ...productForm, sku: event.target.value })} /></label>
             <label>Nombre<input required value={productForm.name} onChange={event => setProductForm({ ...productForm, name: event.target.value })} /></label>
@@ -279,7 +281,7 @@ export default function Inventory() {
               <Boxes size={27} /><div><span>Existencia actual</span><strong>{Number(selected.stock).toLocaleString('es-CR')} {selected.unit}</strong><small>Mínimo: {Number(selected.minimum_stock).toLocaleString('es-CR')}</small></div>
             </div>
 
-            <form className="movement-form" onSubmit={saveMovement}>
+            {canRegisterMovements && <form className="movement-form" onSubmit={saveMovement}>
               <h3>Registrar movimiento</h3>
               <label>Tipo<select value={movementForm.movement_type} onChange={event => setMovementForm({ ...movementForm, movement_type: event.target.value, work_order_id: event.target.value === 'Entrada' ? '' : movementForm.work_order_id })}><option>Entrada</option><option>Salida</option></select></label>
               <label>Cantidad<input required type="number" min="0.01" step="0.01" value={movementForm.quantity} onChange={event => setMovementForm({ ...movementForm, quantity: event.target.value })} /></label>
@@ -287,7 +289,7 @@ export default function Inventory() {
               {movementForm.movement_type === 'Salida' && <label className="wide">Orden de trabajo (opcional)<select value={movementForm.work_order_id} onChange={event => setMovementForm({ ...movementForm, work_order_id: event.target.value })}><option value="">Sin OT</option>{orders.map(order => <option key={order.id} value={order.id}>{order.order_number} · {order.customer?.full_name} · {order.motorcycle?.brand} {order.motorcycle?.model}</option>)}</select></label>}
               <label className="wide">Motivo / observación<textarea value={movementForm.reason} onChange={event => setMovementForm({ ...movementForm, reason: event.target.value })} /></label>
               <button className="primary" disabled={savingMovement}>{savingMovement ? 'Guardando...' : 'Registrar movimiento'}</button>
-            </form>
+            </form>}
 
             <section className="record-section">
               <h3>Historial</h3>

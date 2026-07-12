@@ -28,7 +28,8 @@ const formatDate = value => value
     )
   : '—'
 
-export default function Customers() {
+export default function Customers({ role }) {
+  const canEdit = ['owner', 'admin', 'reception'].includes(role)
   const [rows, setRows] = useState([])
   const [search, setSearch] = useState('')
   const [show, setShow] = useState(false)
@@ -188,12 +189,12 @@ export default function Customers() {
             <h2>Base de clientes</h2>
             <p className="muted">Motocicletas, historial del taller y próximos mantenimientos.</p>
           </div>
-          <button className="primary compact" type="button" onClick={() => setShow(!show)}>
+          {canEdit && <button className="primary compact" type="button" onClick={() => setShow(!show)}>
             <Plus size={18} />Nuevo cliente
-          </button>
+          </button>}
         </div>
 
-        {show && (
+        {canEdit && show && (
           <form className="inline-form" onSubmit={save}>
             <label>Nombre<input required value={form.full_name} onChange={event => setForm({ ...form, full_name: event.target.value })} /></label>
             <label>Teléfono<input required value={form.phone} onChange={event => setForm({ ...form, phone: event.target.value })} /></label>
@@ -243,16 +244,16 @@ export default function Customers() {
             <span className="eyebrow">EXPEDIENTE DEL CLIENTE</span>
             <h2>{selected.full_name}</h2>
 
-            <button
+            {canEdit && <button
               className="secondary compact edit-customer-button"
               type="button"
               onClick={() => setEditing(!editing)}
             >
               {editing ? <X size={17} /> : <Pencil size={17} />}
               {editing ? 'Cancelar edición' : 'Editar datos'}
-            </button>
+            </button>}
 
-            {editing && (
+            {canEdit && editing && (
               <form className="customer-edit-form" onSubmit={saveCustomerChanges}>
                 <label>Nombre
                   <input required value={editForm.full_name} onChange={event => setEditForm({ ...editForm, full_name: event.target.value })} />
