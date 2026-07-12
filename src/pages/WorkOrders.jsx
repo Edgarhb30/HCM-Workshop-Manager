@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Bike, CalendarDays, Search, UserRound, X } from 'lucide-react'
+import {
+  Bike,
+  CalendarDays,
+  MessageCircle,
+  Save,
+  Search,
+  UserRound,
+  Wrench,
+  X
+} from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 const statuses = ['Recepción', 'Diagnóstico', 'Esperando aprobación', 'Esperando repuestos', 'En reparación', 'Lista para entregar', 'Entregada', 'Cancelada']
@@ -16,7 +25,9 @@ export default function WorkOrders() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('Todas')
   const [selected, setSelected] = useState(null)
+  const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(true)
+  const [savingNotes, setSavingNotes] = useState(false)
 
   useEffect(() => { loadOrders() }, [])
 
@@ -52,6 +63,45 @@ export default function WorkOrders() {
     setSelected(data)
   }
 
+  function openOrder(order) {
+    setSelected(order)
+    setNotes(order.internal_notes || '')
+  }
+
+  async function saveNotes() {
+    if (!selected) return
+    setSavingNotes(true)
+
+    const { data, error } = await supabase
+      .from('work_orders')
+      .update({
+        internal_notes: notes.trim() || null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', selected.id)
+      .select('*, customer:customers(id, full_name, phone, email), motorcycle:motorcycles(id, brand, model, plate, motorcycle_year, color, vin)')
+      .single()
+
+    setSavingNotes(false)
+
+    if (error) {
+      alert(`No se pudieron guardar las notas: ${error.message}`)
+      return
+    }
+
+    setOrders(current => current.map(item => item.id === data.id ? data : item))
+    setSelected(data)
+  }
+
+  function whatsappLink(phone) {
+    const cleanPhone = String(phone || '').replace(/\D/g, '')
+    const fullPhone = cleanPhone.startsWith('506') ? cleanPhone : `506${cleanPhone}`
+    const message = encodeURIComponent(
+      `Hola ${selected?.customer?.full_name || ''}. Le escribimos de Herrera Custom Motorcycle sobre la orden ${selected?.order_number || ''} de su ${selected?.motorcycle?.brand || ''} ${selected?.motorcycle?.model || ''}.`
+    )
+    return `https://wa.me/${fullPhone}?text=${message}`
+  }
+
   const filteredOrders = useMemo(() => {
     const term = search.toLowerCase().trim()
     return orders.filter(order => {
@@ -61,6 +111,13 @@ export default function WorkOrders() {
       return matchesStatus && text.includes(term)
     })
   }, [orders, search, status])
+
+  const summary = useMemo(() => ({
+    active: orders.filter(order => !['Entregada', 'Cancelada'].includes(order.status)).length,
+    waiting: orders.filter(order => order.status === 'Esperando repuestos').length,
+    ready: orders.filter(order => order.status === 'Lista para entregar').length,
+    delivered: orders.filter(order => order.status === 'Entregada').length
+  }), [orders])
 
   return (
     <>
@@ -72,6 +129,13 @@ export default function WorkOrders() {
             <p className="muted">Busca una orden, revisa su recepción y actualiza el estado del trabajo.</p>
           </div>
           <button className="secondary" type="button" onClick={loadOrders}>Actualizar</button>
+        </div>
+
+        <div className="order-summary-grid">
+          <article><Wrench size={20} /><span>Activas</span><strong>{summary.active}</strong></article>
+          <article><CalendarDays size={20} /><span>Esperando repuestos</span><strong>{summary.waiting}</strong></article>
+          <article><Bike size={20} /><span>Listas para entregar</span><strong>{summary.ready}</strong></article>
+          <article><UserRound size={20} /><span>Entregadas</span><strong>{summary.delivered}</strong></article>
         </div>
 
         <div className="work-order-toolbar">
@@ -89,7 +153,7 @@ export default function WorkOrders() {
         {loading ? <div className="empty">Cargando órdenes...</div> : filteredOrders.length ? (
           <div className="work-order-list">
             {filteredOrders.map(order => (
-              <button type="button" className="work-order-card" key={order.id} onClick={() => setSelected(order)}>
+              <button type="button" className="work-order-card" key={order.id} onClick={() => openOrder(order)}>
                 <div className="work-order-number"><strong>{order.order_number}</strong><small>{formatDate(order.received_at)}</small></div>
                 <div><UserRound size={17} /><span>{order.customer?.full_name || 'Cliente no disponible'}</span></div>
                 <div><Bike size={17} /><span>{order.motorcycle ? `${order.motorcycle.brand} ${order.motorcycle.model}` : 'Moto no disponible'}</span></div>
@@ -108,6 +172,18 @@ export default function WorkOrders() {
             <h2>{selected.order_number}</h2>
             <span className={`status-badge ${statusClass(selected.status)}`}>{selected.status}</span>
 
+            {selected.customer?.phone && (
+              <a
+                className="whatsapp-action"
+                href={whatsappLink(selected.customer.phone)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <MessageCircle size={18} />
+                Escribir por WhatsApp
+              </a>
+            )}
+
             <div className="order-detail-grid">
               <div><UserRound size={19} /><span>Cliente</span><strong>{selected.customer?.full_name || '—'}</strong><small>{selected.customer?.phone || '—'}</small></div>
               <div><Bike size={19} /><span>Motocicleta</span><strong>{selected.motorcycle ? `${selected.motorcycle.brand} ${selected.motorcycle.model}` : '—'}</strong><small>{selected.motorcycle?.plate ? `Placa ${selected.motorcycle.plate}` : 'Sin placa'}</small></div>
@@ -121,7 +197,26 @@ export default function WorkOrders() {
             </label>
 
             <section className="detail-section"><h3>Motivo del ingreso</h3><p>{selected.intake_notes || 'Sin información.'}</p></section>
-            <section className="detail-section"><h3>Observaciones internas</h3><p>{selected.internal_notes || 'Sin observaciones.'}</p></section>
+            <section className="detail-section">
+              <h3>Diagnóstico y notas internas</h3>
+              <p className="muted">Este contenido es privado para el taller.</p>
+              <textarea
+                className="order-notes"
+                rows="7"
+                placeholder="Pruebas realizadas, resultados, diagnóstico, repuestos necesarios y próximos pasos."
+                value={notes}
+                onChange={event => setNotes(event.target.value)}
+              />
+              <button
+                className="primary compact"
+                type="button"
+                disabled={savingNotes}
+                onClick={saveNotes}
+              >
+                <Save size={18} />
+                {savingNotes ? 'Guardando...' : 'Guardar notas'}
+              </button>
+            </section>
             <section className="detail-section">
               <h3>Inspección de ingreso</h3>
               <p>
