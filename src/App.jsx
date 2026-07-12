@@ -11,6 +11,7 @@ import Customers from './pages/Customers'
 import Motorcycles from './pages/Motorcycles'
 import Reception from './pages/Reception'
 import WorkOrders from './pages/WorkOrders'
+import Quotes from './pages/Quotes'
 import ComingSoon from './pages/ComingSoon'
 
 const titles = {
@@ -72,7 +73,8 @@ export default function App() {
         clearInitialAppointment={() => setReceptionAppointment(null)}
       />
     ),
-    ordenes: <WorkOrders />
+    ordenes: <WorkOrders />,
+    presupuestos: <Quotes />
   }
 
   const content =
