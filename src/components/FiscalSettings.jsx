@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { BadgeCheck, Landmark, Save, ShieldCheck } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import locations from '../data/costaRicaLocations.json'
+import FiscalCredentials from './FiscalCredentials'
 
 const emptyForm = {
   environment: 'test', issuer_name: '', identification_type: '01', identification_number: '',
@@ -130,6 +131,11 @@ export default function FiscalSettings({ workshop, role }) {
           <button type="button" className="primary compact" disabled={!canEdit || saving} onClick={save}><Save size={18} />{saving ? 'Guardando…' : 'Guardar datos fiscales'}</button>
         </div>
       </div>
+      <FiscalCredentials
+        role={role}
+        configured={form.credentials_configured && form.signing_key_configured}
+        onConfigured={load}
+      />
     </section>
   )
 }

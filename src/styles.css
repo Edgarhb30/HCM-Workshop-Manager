@@ -2,3 +2,9 @@
 .fiscal-security-note{display:flex;gap:.7rem;align-items:flex-start;padding:.9rem 1rem;margin-bottom:1rem;border:1px solid color-mix(in srgb,var(--accent) 25%,transparent);border-radius:12px;background:color-mix(in srgb,var(--accent) 8%,var(--surface));color:var(--text)}
 .fiscal-security-note svg{flex:0 0 auto}
 .fiscal-settings .fiscal-form>.settings-actions{margin-top:1rem;justify-content:flex-end}
+.fiscal-credentials{margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border)}
+.fiscal-credentials-title{display:flex;gap:.7rem;align-items:center;margin-bottom:.8rem}
+.fiscal-credentials-title div{display:flex;flex-direction:column;gap:.15rem}.fiscal-credentials-title span{font-size:.85rem;color:var(--muted)}
+.fiscal-configured{display:flex;gap:.55rem;align-items:center;padding:.75rem;border-radius:10px;background:#e9f8ef;color:#176337}
+.fiscal-file-input{position:relative;display:flex;gap:.5rem;align-items:center;min-height:42px;padding:.65rem .8rem;border:1px solid var(--border);border-radius:10px;cursor:pointer;overflow:hidden}
+.fiscal-file-input input{position:absolute;inset:0;opacity:0;cursor:pointer}
