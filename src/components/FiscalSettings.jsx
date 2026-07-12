@@ -34,8 +34,7 @@ export default function FiscalSettings({ workshop, role }) {
     setForm(current => ({ ...current, [field]: value }))
   }
 
-  async function save(event) {
-    event.preventDefault()
+  async function save() {
     if (!canEdit) return
     setSaving(true)
     const payload = {
@@ -74,7 +73,7 @@ export default function FiscalSettings({ workshop, role }) {
     <section className="panel settings-section fiscal-settings">
       <div className="settings-section-title"><Landmark size={22} /><div><h3>Facturación electrónica Costa Rica</h3><p>Datos para comprobantes electrónicos versión 4.4</p></div></div>
       <div className="fiscal-security-note"><ShieldCheck size={19} /><span>La contraseña de Hacienda, el PIN y la llave .p12 se configurarán en el servidor seguro; nunca se guardan en esta pantalla.</span></div>
-      <form onSubmit={save}>
+      <div className="fiscal-form">
         <div className="settings-fields">
           <label>Ambiente<select disabled={!canEdit} value={form.environment} onChange={event => update('environment', event.target.value)}><option value="test">Pruebas</option><option value="production">Producción</option></select></label>
           <label>Nombre o razón social<input disabled={!canEdit} required value={form.issuer_name} onChange={event => update('issuer_name', event.target.value)} /></label>
@@ -97,9 +96,9 @@ export default function FiscalSettings({ workshop, role }) {
         </div>
         <div className="settings-actions">
           {saved && <span className="settings-saved"><BadgeCheck size={17} />Datos fiscales guardados</span>}
-          <button className="primary compact" disabled={!canEdit || saving}><Save size={18} />{saving ? 'Guardando…' : 'Guardar datos fiscales'}</button>
+          <button type="button" className="primary compact" disabled={!canEdit || saving} onClick={save}><Save size={18} />{saving ? 'Guardando…' : 'Guardar datos fiscales'}</button>
         </div>
-      </form>
+      </div>
     </section>
   )
 }
