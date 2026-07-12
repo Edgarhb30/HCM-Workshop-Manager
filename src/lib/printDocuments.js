@@ -170,3 +170,34 @@ export function printInvoiceDocument({ invoice, workshop = null, branding = null
     <footer>Documento generado por HCM Workshop Manager - ${escapeHtml(workshop?.name || 'Herrera Custom Motorcycle')}</footer>
   `)
 }
+
+export function printDeliveryDocument({ order, delivery, signatures = [], workshop = null, branding = null }) {
+  const deliverySignature = signatures.find(item =>
+    item.signer_type === 'Cliente' && item.signature_stage === 'Entrega'
+  )
+  openPrintDocument(`Entrega ${order.order_number}`, `
+    ${brandedHeader({ title: 'Comprobante de entrega', number: order.order_number, date: `Entregada: ${dateTime(delivery.delivered_at)}`, workshop, branding })}
+    <span class="document-status">Orden entregada</span>
+    <h2>Cliente y motocicleta</h2>
+    <div class="grid">
+      <div class="fact"><span>Cliente</span><strong>${value(order.customer?.full_name)}</strong><small>${value(order.customer?.phone)}</small></div>
+      <div class="fact"><span>Motocicleta</span><strong>${value(`${order.motorcycle?.brand || ''} ${order.motorcycle?.model || ''}`.trim())}</strong><small>Placa: ${value(order.motorcycle?.plate || 'Sin placa')}</small></div>
+      <div class="fact"><span>Persona que recibe</span><strong>${value(delivery.receiver_name)}</strong><small>Identificación: ${value(delivery.receiver_identification || 'No indicada')}</small></div>
+      <div class="fact"><span>Salida</span><strong>${delivery.mileage_out?.toLocaleString('es-CR') || 'No registrado'} km</strong><small>Combustible: ${value(delivery.fuel_level_out)}</small></div>
+    </div>
+    <h2>Trabajos realizados</h2><div class="notes">${value(delivery.work_summary)}</div>
+    ${delivery.recommendations ? `<h2>Recomendaciones</h2><div class="notes">${value(delivery.recommendations)}</div>` : ''}
+    <h2>Control de entrega</h2>
+    <div class="grid">
+      <div class="fact"><span>Elementos devueltos</span><strong>${value(delivery.returned_items || 'Sin elementos adicionales')}</strong></div>
+      <div class="fact"><span>Condición de pago</span><strong>${value(delivery.payment_condition)}</strong></div>
+      <div class="fact"><span>Conformidad</span><strong>${delivery.customer_conformity ? 'Cliente recibe conforme' : 'Cliente manifiesta inconformidad'}</strong></div>
+      <div class="fact"><span>Fecha y hora</span><strong>${escapeHtml(dateTime(delivery.delivered_at))}</strong></div>
+    </div>
+    ${delivery.delivery_notes ? `<h2>Observaciones de entrega</h2><div class="notes">${value(delivery.delivery_notes)}</div>` : ''}
+    <h2>Firma de conformidad</h2>
+    ${deliverySignature?.signedUrl ? `<div class="signature"><img src="${escapeHtml(deliverySignature.signedUrl)}" alt="Firma de entrega"><span>${value(deliverySignature.signer_name || delivery.receiver_name)}</span><small>Persona que recibe la motocicleta</small></div>` : '<p class="muted">Sin firma de entrega registrada.</p>'}
+    <div class="disclaimer">La persona firmante confirma la recepción de la motocicleta y de los elementos indicados, junto con la explicación de los trabajos y recomendaciones descritas.</div>
+    <footer>Documento generado por HCM Workshop Manager - ${escapeHtml(workshop?.name || 'Herrera Custom Motorcycle')}</footer>
+  `)
+}

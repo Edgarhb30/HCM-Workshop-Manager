@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import SignaturePad from '../components/SignaturePad'
-import { printReceptionDocument } from '../lib/printDocuments'
+import { printDeliveryDocument, printReceptionDocument } from '../lib/printDocuments'
 
 const statuses = ['Recepción', 'Diagnóstico', 'Esperando aprobación', 'Esperando repuestos', 'En reparación', 'Prueba', 'Lista para entregar', 'Entregada', 'Cancelada']
 const editableStatuses = statuses.filter(item => item !== 'Entregada')
@@ -387,6 +387,7 @@ export default function WorkOrders({ workshop = null, branding = null }) {
                 <p><strong>Fecha:</strong> {formatDate(delivery.delivered_at)}</p>
                 <p><strong>Resumen:</strong> {delivery.work_summary}</p>
                 <p><strong>Pago:</strong> {delivery.payment_condition}</p>
+                <button className="print-document-action" type="button" onClick={() => printDeliveryDocument({ order: selected, delivery, signatures: orderSignatures, workshop, branding })}><Printer size={18} />Imprimir comprobante de entrega / Guardar PDF</button>
               </section>
             )}
 
