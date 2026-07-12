@@ -331,6 +331,24 @@
 .movement-out { background: #491f22; color: #ff9aa0; }
 .movement-history strong, .movement-history span, .movement-history small { display: block; }
 .movement-history span, .movement-history small { color: #929ba4; }
+.delivery-launch { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; color: #dff7e9; background: #173d2d; border: 1px solid #3a765a; border-radius: 12px; padding: 14px; cursor: pointer; }
+.delivery-launch svg { color: #82e0af; }
+.delivery-launch span, .delivery-launch strong, .delivery-launch small { display: block; }
+.delivery-launch small { color: #a6cab7; margin-top: 3px; }
+.delivery-record { border-color: #28513e !important; background: #14231d !important; }
+.delivery-record h3 { display: flex; align-items: center; gap: 8px; color: #82e0af; }
+.delivery-backdrop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 20px; background: #000c; overflow: auto; }
+.delivery-modal { position: relative; width: min(820px, 100%); max-height: calc(100vh - 40px); overflow: auto; background: #171a1d; border: 1px solid #3a4148; border-radius: 18px; padding: 28px; }
+.delivery-modal h2 { margin: 5px 45px 4px 0; }
+.delivery-close { position: absolute; right: 20px; top: 20px; }
+.delivery-balance { display: grid; gap: 4px; background: #14231d; border: 1px solid #28513e; border-radius: 11px; padding: 13px; margin: 20px 0; }
+.delivery-balance.warning { background: #3a2d12; border-color: #80631b; }
+.delivery-balance span { color: #9da6ae; font-size: .77rem; }
+.delivery-form { display: grid; grid-template-columns: repeat(2, 1fr); gap: 13px; }
+.delivery-form label { display: grid; gap: 7px; color: #bec5cb; font-size: .84rem; font-weight: 650; }
+.delivery-form .wide { grid-column: 1 / -1; }
+.delivery-check { display: flex !important; align-items: center; align-self: end; min-height: 42px; }
+.delivery-check input { width: 18px; height: 18px; }
 
 @media (max-width: 760px) {
   .work-order-toolbar, .work-order-card, .reception-progress, .order-summary-grid { grid-template-columns: 1fr; }
@@ -367,6 +385,9 @@
   .media-section-heading { align-items: flex-start; flex-direction: column; }
   .reception-photo-grid { grid-template-columns: 1fr; }
   .order-photo-gallery { grid-template-columns: 1fr 1fr; }
+  .delivery-form { grid-template-columns: 1fr; }
+  .delivery-form .wide { grid-column: auto; }
+  .delivery-modal { padding: 22px 16px; }
 }
 
 /* Portal público y reservas */

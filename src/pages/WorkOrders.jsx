@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   Bike,
   CalendarDays,
+  CheckCircle2,
+  ClipboardCheck,
   MessageCircle,
   Save,
   Search,
@@ -10,8 +12,17 @@ import {
   X
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import SignaturePad from '../components/SignaturePad'
 
-const statuses = ['Recepción', 'Diagnóstico', 'Esperando aprobación', 'Esperando repuestos', 'En reparación', 'Lista para entregar', 'Entregada', 'Cancelada']
+const statuses = ['Recepción', 'Diagnóstico', 'Esperando aprobación', 'Esperando repuestos', 'En reparación', 'Prueba', 'Lista para entregar', 'Entregada', 'Cancelada']
+const editableStatuses = statuses.filter(item => item !== 'Entregada')
+
+const emptyDelivery = {
+  receiver_name: '', receiver_identification: '', mileage_out: '',
+  fuel_level_out: '1/2', work_summary: '', recommendations: '',
+  returned_items: '', payment_condition: 'Sin factura',
+  customer_conformity: true, delivery_notes: ''
+}
 
 const statusClass = status =>
   status.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replaceAll(' ', '-')
@@ -31,6 +42,12 @@ export default function WorkOrders() {
   const [orderPhotos, setOrderPhotos] = useState([])
   const [orderSignatures, setOrderSignatures] = useState([])
   const [loadingMedia, setLoadingMedia] = useState(false)
+  const [delivery, setDelivery] = useState(null)
+  const [deliveryForm, setDeliveryForm] = useState(emptyDelivery)
+  const [deliverySignature, setDeliverySignature] = useState('')
+  const [showDelivery, setShowDelivery] = useState(false)
+  const [savingDelivery, setSavingDelivery] = useState(false)
+  const [invoiceBalance, setInvoiceBalance] = useState(null)
 
   useEffect(() => { loadOrders() }, [])
 
@@ -50,6 +67,10 @@ export default function WorkOrders() {
   }
 
   async function updateStatus(order, nextStatus) {
+    if (nextStatus === 'Entregada') {
+      prepareDelivery(order)
+      return
+    }
     const { data, error } = await supabase
       .from('work_orders')
       .update({
@@ -72,8 +93,11 @@ export default function WorkOrders() {
     setOrderPhotos([])
     setOrderSignatures([])
     setLoadingMedia(true)
+    setDelivery(null)
+    setShowDelivery(false)
+    setDeliverySignature('')
 
-    const [photosResult, signaturesResult] = await Promise.all([
+    const [photosResult, signaturesResult, deliveryResult, invoicesResult] = await Promise.all([
       supabase
         .from('work_order_photos')
         .select('*')
@@ -83,11 +107,23 @@ export default function WorkOrders() {
         .from('work_order_signatures')
         .select('*')
         .eq('work_order_id', order.id)
-        .order('signed_at')
+        .order('signed_at'),
+      supabase
+        .from('work_order_deliveries')
+        .select('*')
+        .eq('work_order_id', order.id)
+        .maybeSingle(),
+      supabase
+        .from('invoices')
+        .select('total, amount_paid, status')
+        .eq('work_order_id', order.id)
+        .neq('status', 'Anulada')
     ])
 
     if (photosResult.error) alert(photosResult.error.message)
     if (signaturesResult.error) alert(signaturesResult.error.message)
+    if (deliveryResult.error) alert(deliveryResult.error.message)
+    if (invoicesResult.error) alert(invoicesResult.error.message)
 
     const signRows = async rows => Promise.all(
       (rows || []).map(async row => {
@@ -100,7 +136,95 @@ export default function WorkOrders() {
 
     setOrderPhotos(await signRows(photosResult.data))
     setOrderSignatures(await signRows(signaturesResult.data))
+    setDelivery(deliveryResult.data || null)
+    const balance = (invoicesResult.data || []).reduce(
+      (total, invoice) => total + Number(invoice.total || 0) - Number(invoice.amount_paid || 0),
+      0
+    )
+    setInvoiceBalance({
+      hasInvoice: !!invoicesResult.data?.length,
+      amount: balance
+    })
     setLoadingMedia(false)
+  }
+
+  function prepareDelivery(order = selected) {
+    if (!order) return
+    if (!['Lista para entregar', 'Prueba'].includes(order.status)) {
+      alert('Primero cambia la orden a Prueba o Lista para entregar.')
+      return
+    }
+    setDeliveryForm({
+      ...emptyDelivery,
+      receiver_name: order.customer?.full_name || '',
+      mileage_out: order.mileage ?? '',
+      fuel_level_out: order.fuel_level || '1/2',
+      payment_condition: invoiceBalance?.hasInvoice
+        ? invoiceBalance.amount > 0 ? 'Saldo pendiente autorizado' : 'Pagado'
+        : 'Sin factura'
+    })
+    setDeliverySignature('')
+    setShowDelivery(true)
+  }
+
+  function updateDelivery(field, value) {
+    setDeliveryForm(current => ({ ...current, [field]: value }))
+  }
+
+  async function uploadDeliverySignature(order) {
+    const blob = await fetch(deliverySignature).then(response => response.blob())
+    const path = `${order.workshop_id}/${order.id}/signatures/delivery-client-${crypto.randomUUID()}.png`
+    const { error: uploadError } = await supabase.storage
+      .from('work-order-media')
+      .upload(path, blob, { contentType: 'image/png', upsert: false })
+    if (uploadError) throw uploadError
+
+    const { error } = await supabase.from('work_order_signatures').insert({
+      workshop_id: order.workshop_id,
+      work_order_id: order.id,
+      signer_type: 'Cliente',
+      signer_name: deliveryForm.receiver_name.trim(),
+      signature_stage: 'Entrega',
+      storage_path: path
+    })
+    if (error) throw error
+  }
+
+  async function completeDelivery(event) {
+    event.preventDefault()
+    if (!selected || !deliverySignature) {
+      alert('La firma de quien recibe es obligatoria.')
+      return
+    }
+    setSavingDelivery(true)
+    const { error } = await supabase.rpc('complete_work_order_delivery', {
+      p_work_order_id: selected.id,
+      p_receiver_name: deliveryForm.receiver_name,
+      p_receiver_identification: deliveryForm.receiver_identification,
+      p_mileage_out: deliveryForm.mileage_out ? Number(deliveryForm.mileage_out) : null,
+      p_fuel_level_out: deliveryForm.fuel_level_out,
+      p_work_summary: deliveryForm.work_summary,
+      p_recommendations: deliveryForm.recommendations,
+      p_returned_items: deliveryForm.returned_items,
+      p_payment_condition: deliveryForm.payment_condition,
+      p_customer_conformity: deliveryForm.customer_conformity,
+      p_delivery_notes: deliveryForm.delivery_notes
+    })
+    if (error) {
+      setSavingDelivery(false)
+      alert(`No se pudo completar la entrega: ${error.message}`)
+      return
+    }
+    try {
+      await uploadDeliverySignature(selected)
+    } catch (signatureError) {
+      alert(`La entrega se guardó, pero la firma no pudo subirse: ${signatureError.message}`)
+    }
+    setSavingDelivery(false)
+    setShowDelivery(false)
+    await loadOrders()
+    setSelected(null)
+    alert('Motocicleta entregada correctamente.')
   }
 
   async function saveNotes() {
@@ -226,10 +350,27 @@ export default function WorkOrders() {
             </div>
 
             <label className="order-status-control">Estado actual
-              <select value={selected.status} onChange={event => updateStatus(selected, event.target.value)}>
-                {statuses.map(item => <option key={item}>{item}</option>)}
+              <select value={selected.status} disabled={selected.status === 'Entregada'} onChange={event => updateStatus(selected, event.target.value)}>
+                {(selected.status === 'Entregada' ? statuses : editableStatuses).map(item => <option key={item}>{item}</option>)}
               </select>
             </label>
+
+            {['Lista para entregar', 'Prueba'].includes(selected.status) && !delivery && (
+              <button className="delivery-launch" type="button" onClick={() => prepareDelivery(selected)}>
+                <ClipboardCheck size={21} />
+                <span><strong>Entregar motocicleta</strong><small>Registrar salida, conformidad y firma.</small></span>
+              </button>
+            )}
+
+            {delivery && (
+              <section className="detail-section delivery-record">
+                <h3><CheckCircle2 size={19} /> Entrega completada</h3>
+                <p><strong>Recibió:</strong> {delivery.receiver_name}</p>
+                <p><strong>Fecha:</strong> {formatDate(delivery.delivered_at)}</p>
+                <p><strong>Resumen:</strong> {delivery.work_summary}</p>
+                <p><strong>Pago:</strong> {delivery.payment_condition}</p>
+              </section>
+            )}
 
             <section className="detail-section"><h3>Motivo del ingreso</h3><p>{selected.intake_notes || 'Sin información.'}</p></section>
             <section className="detail-section">
@@ -297,6 +438,37 @@ export default function WorkOrders() {
               )}
             </section>
           </aside>
+        </div>
+      )}
+
+      {selected && showDelivery && (
+        <div className="delivery-backdrop" onClick={() => setShowDelivery(false)}>
+          <section className="delivery-modal" onClick={event => event.stopPropagation()}>
+            <button className="icon delivery-close" type="button" onClick={() => setShowDelivery(false)}><X size={20} /></button>
+            <span className="eyebrow">CIERRE DE LA ORDEN</span>
+            <h2>Entrega de {selected.motorcycle?.brand} {selected.motorcycle?.model}</h2>
+            <p className="muted">{selected.order_number} · {selected.customer?.full_name}</p>
+
+            <div className={`delivery-balance ${invoiceBalance?.amount > 0 ? 'warning' : ''}`}>
+              <span>Estado de cuenta</span>
+              <strong>{invoiceBalance?.hasInvoice ? invoiceBalance.amount > 0 ? `Saldo pendiente: ₡${invoiceBalance.amount.toLocaleString('es-CR')}` : 'Factura pagada' : 'Sin factura registrada'}</strong>
+            </div>
+
+            <form className="delivery-form" onSubmit={completeDelivery}>
+              <label>Nombre de quien recibe<input required value={deliveryForm.receiver_name} onChange={e => updateDelivery('receiver_name', e.target.value)} /></label>
+              <label>Identificación (opcional)<input value={deliveryForm.receiver_identification} onChange={e => updateDelivery('receiver_identification', e.target.value)} /></label>
+              <label>Kilometraje de salida<input type="number" min="0" value={deliveryForm.mileage_out} onChange={e => updateDelivery('mileage_out', e.target.value)} /></label>
+              <label>Combustible de salida<select value={deliveryForm.fuel_level_out} onChange={e => updateDelivery('fuel_level_out', e.target.value)}><option>Vacío</option><option>1/4</option><option>1/2</option><option>3/4</option><option>Lleno</option></select></label>
+              <label className="wide">Resumen de trabajos realizados<textarea required rows="4" value={deliveryForm.work_summary} onChange={e => updateDelivery('work_summary', e.target.value)} /></label>
+              <label className="wide">Recomendaciones al cliente<textarea rows="3" value={deliveryForm.recommendations} onChange={e => updateDelivery('recommendations', e.target.value)} /></label>
+              <label className="wide">Elementos devueltos<textarea rows="2" placeholder="Llaves, documentos u otros elementos." value={deliveryForm.returned_items} onChange={e => updateDelivery('returned_items', e.target.value)} /></label>
+              <label>Condición de pago<select value={deliveryForm.payment_condition} onChange={e => updateDelivery('payment_condition', e.target.value)}><option>Pagado</option><option>Saldo pendiente autorizado</option><option>Sin factura</option></select></label>
+              <label className="delivery-check"><input type="checkbox" checked={deliveryForm.customer_conformity} onChange={e => updateDelivery('customer_conformity', e.target.checked)} /> Cliente recibe conforme</label>
+              <label className="wide">Observaciones de entrega<textarea rows="2" value={deliveryForm.delivery_notes} onChange={e => updateDelivery('delivery_notes', e.target.value)} /></label>
+              <div className="wide"><strong>Firma de quien recibe</strong><SignaturePad value={deliverySignature} onChange={setDeliverySignature} /></div>
+              <button className="primary wide" disabled={savingDelivery}>{savingDelivery ? 'Completando entrega…' : 'Confirmar entrega de motocicleta'}</button>
+            </form>
+          </section>
         </div>
       )}
     </>
