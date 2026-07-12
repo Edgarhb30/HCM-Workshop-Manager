@@ -28,6 +28,9 @@ export default function WorkOrders() {
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(true)
   const [savingNotes, setSavingNotes] = useState(false)
+  const [orderPhotos, setOrderPhotos] = useState([])
+  const [orderSignatures, setOrderSignatures] = useState([])
+  const [loadingMedia, setLoadingMedia] = useState(false)
 
   useEffect(() => { loadOrders() }, [])
 
@@ -63,9 +66,41 @@ export default function WorkOrders() {
     setSelected(data)
   }
 
-  function openOrder(order) {
+  async function openOrder(order) {
     setSelected(order)
     setNotes(order.internal_notes || '')
+    setOrderPhotos([])
+    setOrderSignatures([])
+    setLoadingMedia(true)
+
+    const [photosResult, signaturesResult] = await Promise.all([
+      supabase
+        .from('work_order_photos')
+        .select('*')
+        .eq('work_order_id', order.id)
+        .order('created_at'),
+      supabase
+        .from('work_order_signatures')
+        .select('*')
+        .eq('work_order_id', order.id)
+        .order('signed_at')
+    ])
+
+    if (photosResult.error) alert(photosResult.error.message)
+    if (signaturesResult.error) alert(signaturesResult.error.message)
+
+    const signRows = async rows => Promise.all(
+      (rows || []).map(async row => {
+        const { data } = await supabase.storage
+          .from('work-order-media')
+          .createSignedUrl(row.storage_path, 3600)
+        return { ...row, signedUrl: data?.signedUrl || '' }
+      })
+    )
+
+    setOrderPhotos(await signRows(photosResult.data))
+    setOrderSignatures(await signRows(signaturesResult.data))
+    setLoadingMedia(false)
   }
 
   async function saveNotes() {
@@ -228,6 +263,37 @@ export default function WorkOrders() {
                 </ul>
               ) : (
                 <p>Esta orden no tiene inspección registrada.</p>
+              )}
+            </section>
+
+            <section className="detail-section">
+              <h3>Fotografías y firmas</h3>
+              {loadingMedia ? (
+                <div className="empty compact-empty">Cargando evidencias...</div>
+              ) : (
+                <>
+                  {orderPhotos.length ? (
+                    <div className="order-photo-gallery">
+                      {orderPhotos.map(photo => (
+                        <a href={photo.signedUrl} target="_blank" rel="noreferrer" key={photo.id}>
+                          <img src={photo.signedUrl} alt={photo.photo_type} />
+                          <span>{photo.photo_type}</span>
+                        </a>
+                      ))}
+                    </div>
+                  ) : <p>Sin fotografías registradas.</p>}
+
+                  {!!orderSignatures.length && (
+                    <div className="order-signatures">
+                      {orderSignatures.map(signature => (
+                        <div key={signature.id}>
+                          <span>{signature.signer_type}: {signature.signer_name || 'Sin nombre'}</span>
+                          <img src={signature.signedUrl} alt={`Firma de ${signature.signer_name || signature.signer_type}`} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
             </section>
           </aside>

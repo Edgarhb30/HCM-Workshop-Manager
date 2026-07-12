@@ -3,14 +3,17 @@ import {
   UserRound,
   Bike,
   CalendarDays,
+  Camera,
   Search,
   ArrowRight,
   CheckCircle2,
   Plus,
   X,
-  ClipboardCheck
+  ClipboardCheck,
+  Trash2
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import SignaturePad from '../components/SignaturePad'
 
 const emptyCustomerForm = {
   full_name: '',
@@ -73,6 +76,16 @@ const conditionChecks = [
   ['missing_parts', 'Tornillos o piezas faltantes']
 ]
 
+const photoTypes = [
+  'Frente',
+  'Lado izquierdo',
+  'Lado derecho',
+  'Parte trasera',
+  'Tablero',
+  'Daño',
+  'Otro'
+]
+
 const cleanPhone = value => String(value || '').replace(/\D/g, '')
 
 const appointmentMotorcycle = appointment => ({
@@ -86,7 +99,8 @@ const appointmentMotorcycle = appointment => ({
 
 export default function Reception({
   initialAppointment = null,
-  clearInitialAppointment = () => {}
+  clearInitialAppointment = () => {},
+  workshop = null
 }) {
   const [customers, setCustomers] = useState([])
   const [motorcycles, setMotorcycles] = useState([])
@@ -117,6 +131,10 @@ export default function Reception({
   const [savingOrder, setSavingOrder] = useState(false)
   const [createdOrder, setCreatedOrder] = useState(null)
   const [appointmentLoaded, setAppointmentLoaded] = useState(false)
+  const [photos, setPhotos] = useState([])
+  const [clientSignature, setClientSignature] = useState('')
+  const [signerName, setSignerName] = useState('')
+  const [mediaResult, setMediaResult] = useState({ photos: 0, signature: false, warning: '' })
 
   useEffect(() => {
     loadData()
@@ -243,6 +261,7 @@ export default function Reception({
     setShowReceptionForm(false)
     setMotorcycleSearch('')
     setCreatedOrder(null)
+    setSignerName(customer.full_name || '')
   }
 
   function chooseMotorcycle(motorcycle) {
@@ -259,6 +278,7 @@ export default function Reception({
   }
 
   function restart() {
+    photos.forEach(photo => URL.revokeObjectURL(photo.preview))
     clearInitialAppointment()
     setSelectedCustomer(null)
     setSelectedMotorcycle(null)
@@ -272,6 +292,10 @@ export default function Reception({
     setReceptionForm(emptyReceptionForm)
     setCreatedOrder(null)
     setAppointmentLoaded(false)
+    setPhotos([])
+    setClientSignature('')
+    setSignerName('')
+    setMediaResult({ photos: 0, signature: false, warning: '' })
   }
 
   function updateMotorcycleForm(field, value) {
@@ -293,6 +317,101 @@ export default function Reception({
       ...current,
       [field]: value
     }))
+  }
+
+  function addPhotos(event) {
+    const files = [...event.target.files]
+    const next = files.map((file, index) => ({
+      id: crypto.randomUUID(),
+      file,
+      preview: URL.createObjectURL(file),
+      photo_type: photoTypes[Math.min(index, photoTypes.length - 1)],
+      caption: '',
+      client_visible: false
+    }))
+    setPhotos(current => [...current, ...next])
+    event.target.value = ''
+  }
+
+  function updatePhoto(id, field, value) {
+    setPhotos(current =>
+      current.map(photo => photo.id === id ? { ...photo, [field]: value } : photo)
+    )
+  }
+
+  function removePhoto(id) {
+    setPhotos(current => {
+      const removed = current.find(photo => photo.id === id)
+      if (removed) URL.revokeObjectURL(removed.preview)
+      return current.filter(photo => photo.id !== id)
+    })
+  }
+
+  async function uploadReceptionMedia(order) {
+    if (!workshop?.id) {
+      return { photos: 0, signature: false, warning: 'No se encontró el taller activo.' }
+    }
+
+    let uploadedPhotos = 0
+    let signatureUploaded = false
+    const errors = []
+
+    for (const photo of photos) {
+      const extension = photo.file.name.split('.').pop()?.toLowerCase() || 'jpg'
+      const path = `${workshop.id}/${order.id}/photos/${crypto.randomUUID()}.${extension}`
+      const { error: uploadError } = await supabase.storage
+        .from('work-order-media')
+        .upload(path, photo.file, { contentType: photo.file.type, upsert: false })
+
+      if (uploadError) {
+        errors.push(uploadError.message)
+        continue
+      }
+
+      const { error: recordError } = await supabase
+        .from('work_order_photos')
+        .insert({
+          work_order_id: order.id,
+          motorcycle_id: selectedMotorcycle.id,
+          storage_path: path,
+          photo_type: photo.photo_type,
+          caption: photo.caption.trim() || null,
+          client_visible: photo.client_visible
+        })
+
+      if (recordError) errors.push(recordError.message)
+      else uploadedPhotos += 1
+    }
+
+    if (clientSignature) {
+      const blob = await fetch(clientSignature).then(response => response.blob())
+      const path = `${workshop.id}/${order.id}/signatures/client-${crypto.randomUUID()}.png`
+      const { error: uploadError } = await supabase.storage
+        .from('work-order-media')
+        .upload(path, blob, { contentType: 'image/png', upsert: false })
+
+      if (uploadError) {
+        errors.push(uploadError.message)
+      } else {
+        const { error: recordError } = await supabase
+          .from('work_order_signatures')
+          .insert({
+            work_order_id: order.id,
+            signer_type: 'Cliente',
+            signer_name: signerName.trim() || selectedCustomer.full_name,
+            storage_path: path
+          })
+
+        if (recordError) errors.push(recordError.message)
+        else signatureUploaded = true
+      }
+    }
+
+    return {
+      photos: uploadedPhotos,
+      signature: signatureUploaded,
+      warning: errors.length ? `Algunos archivos no se guardaron: ${errors[0]}` : ''
+    }
   }
 
   async function saveCustomer(event) {
@@ -442,6 +561,8 @@ export default function Reception({
         .eq('id', initialAppointment.id)
     }
 
+    const uploadedMedia = await uploadReceptionMedia(data)
+    setMediaResult(uploadedMedia)
     setCreatedOrder(data)
     setSavingOrder(false)
   }
@@ -464,6 +585,12 @@ export default function Reception({
             {selectedMotorcycle.brand}{' '}
             {selectedMotorcycle.model}
           </p>
+
+          <div className="media-success-summary">
+            <span>{mediaResult.photos} fotografías guardadas</span>
+            <span>{mediaResult.signature ? 'Firma del cliente guardada' : 'Sin firma del cliente'}</span>
+            {mediaResult.warning && <small>{mediaResult.warning}</small>}
+          </div>
 
           <button
             type="button"
@@ -1108,6 +1235,49 @@ export default function Reception({
                   }
                 />
               </label>
+
+              <div className="wide reception-media-section">
+                <div className="media-section-heading">
+                  <div><Camera size={23} /><div><h3>Fotografías de recepción</h3><p>Frente, lados, tablero y daños visibles.</p></div></div>
+                  <label className="primary compact photo-input-button">
+                    <Camera size={18} />Tomar o elegir fotos
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      capture="environment"
+                      multiple
+                      onChange={addPhotos}
+                    />
+                  </label>
+                </div>
+
+                {photos.length ? (
+                  <div className="reception-photo-grid">
+                    {photos.map(photo => (
+                      <article key={photo.id}>
+                        <img src={photo.preview} alt="Vista previa de recepción" />
+                        <select value={photo.photo_type} onChange={event => updatePhoto(photo.id, 'photo_type', event.target.value)}>
+                          {photoTypes.map(type => <option key={type}>{type}</option>)}
+                        </select>
+                        <input placeholder="Descripción opcional" value={photo.caption} onChange={event => updatePhoto(photo.id, 'caption', event.target.value)} />
+                        <label className="photo-visible"><input type="checkbox" checked={photo.client_visible} onChange={event => updatePhoto(photo.id, 'client_visible', event.target.checked)} />Visible para el cliente</label>
+                        <button className="remove-photo" type="button" onClick={() => removePhoto(photo.id)}><Trash2 size={16} />Eliminar</button>
+                      </article>
+                    ))}
+                  </div>
+                ) : <div className="empty compact-empty">Todavía no se agregaron fotografías.</div>}
+              </div>
+
+              <div className="wide reception-media-section">
+                <div className="media-section-heading">
+                  <div><ClipboardCheck size={23} /><div><h3>Firma del cliente</h3><p>El cliente puede firmar con el dedo o el mouse.</p></div></div>
+                </div>
+                <label>
+                  Nombre de quien firma
+                  <input value={signerName} onChange={event => setSignerName(event.target.value)} />
+                </label>
+                <SignaturePad value={clientSignature} onChange={setClientSignature} />
+              </div>
 
               <label className="wide">
                 Observaciones internas

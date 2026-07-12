@@ -133,6 +133,7 @@ export default function App() {
       <Reception
         initialAppointment={receptionAppointment}
         clearInitialAppointment={() => setReceptionAppointment(null)}
+        workshop={membership.workshop}
       />
     ),
     ordenes: <WorkOrders />,
