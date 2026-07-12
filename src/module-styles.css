@@ -668,4 +668,7 @@
 .upcoming-blocks article { display: flex; align-items: center; gap: 9px; padding: 10px 12px; border: 1px solid var(--border-color, #ddd); border-radius: 12px; }
 .upcoming-blocks article > span { display: grid; }
 @media (max-width: 750px) { .schedule-block-form { grid-template-columns: 1fr; } .schedule-block-form .wide { grid-column: auto; } }
+.reprogram-form { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto auto; gap: 10px; align-items: end; width: 100%; padding: 12px; border-top: 1px solid var(--border-color, #ddd); }
+.reprogram-form label { display: grid; gap: 5px; font-weight: 700; }
+@media (max-width: 850px) { .reprogram-form { grid-template-columns: 1fr; } }
 @media (max-width: 700px) { .diagnostic-form { grid-template-columns: 1fr; } .diagnostic-form .wide { grid-column: auto; } }

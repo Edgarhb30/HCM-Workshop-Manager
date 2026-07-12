@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   CalendarDays,
+  CalendarClock,
   MessageCircle,
   Plus,
   Search,
@@ -18,6 +19,10 @@ export default function Agenda({ onReceive, role }) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('Todas')
   const [blocks, setBlocks] = useState([])
+  const [services, setServices] = useState([])
+  const [editingAppointment, setEditingAppointment] = useState(null)
+  const [reprogramForm, setReprogramForm] = useState({ service_id: '', date: '', time: '' })
+  const [reprogramming, setReprogramming] = useState(false)
   const [showBlockForm, setShowBlockForm] = useState(false)
   const [blockForm, setBlockForm] = useState({ block_date: '', all_day: true, start_time: '12:00', end_time: '13:00', reason: '' })
 
@@ -25,9 +30,10 @@ export default function Agenda({ onReceive, role }) {
 
   async function load() {
     setLoading(true)
-    const [appointmentsResult, blocksResult] = await Promise.all([
+    const [appointmentsResult, blocksResult, servicesResult] = await Promise.all([
       supabase.from('appointments').select('*').order('appointment_date').order('appointment_time'),
-      supabase.from('schedule_blocks').select('*').gte('block_date', new Date().toLocaleDateString('en-CA')).order('block_date').order('start_time')
+      supabase.from('schedule_blocks').select('*').gte('block_date', new Date().toLocaleDateString('en-CA')).order('block_date').order('start_time'),
+      supabase.from('appointment_services').select('*').eq('active', true).order('name')
     ])
     const { data, error } = appointmentsResult
 
@@ -35,7 +41,33 @@ export default function Agenda({ onReceive, role }) {
     setRows(data || [])
     if (blocksResult.error) alert(blocksResult.error.message)
     else setBlocks(blocksResult.data || [])
+    if (servicesResult.error) alert(servicesResult.error.message)
+    else setServices(servicesResult.data || [])
     setLoading(false)
+  }
+
+  function startReprogramming(appointment) {
+    setEditingAppointment(appointment.id)
+    setReprogramForm({
+      service_id: appointment.service_id || services.find(service => service.name === appointment.service)?.id || '',
+      date: appointment.appointment_date,
+      time: String(appointment.appointment_time).slice(0, 5)
+    })
+  }
+
+  async function reprogram(event, appointment) {
+    event.preventDefault()
+    setReprogramming(true)
+    const { error } = await supabase.rpc('reprogram_appointment', {
+      p_appointment_id: appointment.id,
+      p_service_id: reprogramForm.service_id,
+      p_date: reprogramForm.date,
+      p_time: reprogramForm.time
+    })
+    setReprogramming(false)
+    if (error) return alert(`No se pudo reprogramar: ${error.message}`)
+    setEditingAppointment(null)
+    load()
   }
 
   async function saveBlock(event) {
@@ -172,7 +204,15 @@ export default function Agenda({ onReceive, role }) {
                     <Wrench size={17} />Recibir moto
                   </button>
                 )}
+                {canManage && appointment.status !== 'Completada' && <button className="secondary compact" type="button" onClick={() => startReprogramming(appointment)}><CalendarClock size={17} />Reprogramar</button>}
               </div>
+              {editingAppointment === appointment.id && <form className="reprogram-form" onSubmit={event => reprogram(event, appointment)}>
+                <label>Servicio<select required value={reprogramForm.service_id} onChange={event => setReprogramForm({ ...reprogramForm, service_id: event.target.value })}><option value="">Seleccionar</option>{services.map(service => <option value={service.id} key={service.id}>{service.name} · {service.duration_minutes} min</option>)}</select></label>
+                <label>Nueva fecha<input required type="date" min={new Date().toLocaleDateString('en-CA')} value={reprogramForm.date} onChange={event => setReprogramForm({ ...reprogramForm, date: event.target.value })} /></label>
+                <label>Nueva hora<input required type="time" value={reprogramForm.time} onChange={event => setReprogramForm({ ...reprogramForm, time: event.target.value })} /></label>
+                <button className="primary compact" disabled={reprogramming}>{reprogramming ? 'Comprobando…' : 'Guardar nueva cita'}</button>
+                <button className="secondary compact" type="button" onClick={() => setEditingAppointment(null)}>Cancelar</button>
+              </form>}
             </article>
           ))}
         </div>
