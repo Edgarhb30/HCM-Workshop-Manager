@@ -36,6 +36,19 @@ export default function FiscalSettings({ workshop, role }) {
 
   async function save() {
     if (!canEdit) return
+    const provinceCode = form.province_code.replace(/[^0-9]/g, '')
+    const cantonDigits = form.canton_code.replace(/[^0-9]/g, '')
+    const districtDigits = form.district_code.replace(/[^0-9]/g, '')
+    const neighborhoodDigits = form.neighborhood_code.replace(/[^0-9]/g, '')
+    const cantonCode = cantonDigits ? cantonDigits.padStart(2, '0') : ''
+    const districtCode = districtDigits ? districtDigits.padStart(2, '0') : ''
+    const neighborhoodCode = neighborhoodDigits ? neighborhoodDigits.padStart(2, '0') : null
+
+    if (!/^[1-7]$/.test(provinceCode)) return alert('Provincia debe ser un número del 1 al 7.')
+    if (!/^[0-9]{2}$/.test(cantonCode)) return alert('Cantón debe contener dos números. Ejemplo: 01.')
+    if (!/^[0-9]{2}$/.test(districtCode)) return alert('Distrito debe contener dos números. Ejemplo: 01.')
+    if (neighborhoodCode && !/^[0-9]{2}$/.test(neighborhoodCode)) return alert('Barrio debe contener dos números o quedar vacío.')
+
     setSaving(true)
     const payload = {
       workshop_id: workshop.id,
@@ -45,10 +58,10 @@ export default function FiscalSettings({ workshop, role }) {
       identification_number: form.identification_number.replace(/[^0-9]/g, ''),
       economic_activity_code: form.economic_activity_code.replace(/[^0-9]/g, ''),
       economic_activity_name: form.economic_activity_name.trim() || null,
-      province_code: form.province_code,
-      canton_code: form.canton_code.padStart(2, '0'),
-      district_code: form.district_code.padStart(2, '0'),
-      neighborhood_code: form.neighborhood_code ? form.neighborhood_code.padStart(2, '0') : null,
+      province_code: provinceCode,
+      canton_code: cantonCode,
+      district_code: districtCode,
+      neighborhood_code: neighborhoodCode,
       other_signs: form.other_signs.trim(),
       phone_country_code: form.phone_country_code.replace(/[^0-9]/g, ''),
       phone_number: form.phone_number.replace(/[^0-9]/g, ''),
