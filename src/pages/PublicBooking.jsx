@@ -1,18 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Bike, CalendarDays, CheckCircle2, Clock3, Wrench } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { defaultBranding, themeVariables } from '../lib/theme'
 
 const initialForm = {
   customer_name: '', phone: '', email: '', brand: '', model: '',
-  motorcycle_year: '', plate: '', service: '', date: '', time: '', notes: ''
-}
-
-const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
-
-function minutes(value = '00:00') {
-  const [hour, minute] = value.slice(0, 5).split(':').map(Number)
-  return hour * 60 + minute
+  motorcycle_year: '', plate: '', service_id: '', date: '', time: '', notes: ''
 }
 
 function timeLabel(value) {
@@ -25,7 +18,8 @@ function timeLabel(value) {
 export default function PublicBooking({ workshopSlug }) {
   const [config, setConfig] = useState(null)
   const [form, setForm] = useState(initialForm)
-  const [booked, setBooked] = useState([])
+  const [slots, setSlots] = useState([])
+  const [loadingSlots, setLoadingSlots] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
@@ -37,41 +31,34 @@ export default function PublicBooking({ workshopSlug }) {
   }
 
   useEffect(() => {
-    supabase.rpc('get_public_workshop_config', { p_workshop_slug: workshopSlug })
-      .then(({ data, error }) => {
+    Promise.all([
+      supabase.rpc('get_public_workshop_config', { p_workshop_slug: workshopSlug }),
+      supabase.rpc('get_public_booking_config', { p_workshop_slug: workshopSlug })
+    ]).then(([brandingResult, bookingResult]) => {
+        const error = bookingResult.error || brandingResult.error
         if (error) setMessage(error.message)
-        else setConfig(data)
+        else setConfig({ ...(brandingResult.data || {}), ...(bookingResult.data || {}) })
         setLoading(false)
       })
   }, [workshopSlug])
 
   useEffect(() => {
-    if (!form.date) {
-      setBooked([])
+    if (!form.date || !form.service_id) {
+      setSlots([])
       return
     }
     setForm(current => ({ ...current, time: '' }))
-    supabase.rpc('get_public_booked_slots', {
+    setLoadingSlots(true)
+    supabase.rpc('get_public_available_slots', {
       p_workshop_slug: workshopSlug,
-      p_date: form.date
-    }).then(({ data }) => setBooked((data || []).map(item => item.appointment_time.slice(0, 5))))
-  }, [form.date, workshopSlug])
-
-  const slots = useMemo(() => {
-    if (!config || !form.date) return []
-    const date = new Date(`${form.date}T12:00:00`)
-    const hours = config.business_hours?.[dayKeys[date.getDay()]]
-    if (!hours?.open) return []
-    const start = minutes(hours.start)
-    const end = minutes(hours.end)
-    const step = Number(config.appointment_slot_minutes) || 60
-    const result = []
-    for (let value = start; value < end; value += step) {
-      const slot = `${String(Math.floor(value / 60)).padStart(2, '0')}:${String(value % 60).padStart(2, '0')}`
-      if (!booked.includes(slot)) result.push(slot)
-    }
-    return result
-  }, [config, form.date, booked])
+      p_date: form.date,
+      p_service_id: form.service_id
+    }).then(({ data, error }) => {
+      if (error) setMessage(error.message)
+      setSlots((data || []).map(item => item.appointment_time.slice(0, 5)))
+      setLoadingSlots(false)
+    })
+  }, [form.date, form.service_id, workshopSlug])
 
   function update(field, value) {
     setForm(current => ({ ...current, [field]: value }))
@@ -81,7 +68,7 @@ export default function PublicBooking({ workshopSlug }) {
     event.preventDefault()
     setSaving(true)
     setMessage('')
-    const { error } = await supabase.rpc('create_public_appointment', {
+    const { error } = await supabase.rpc('create_public_appointment_v2', {
       p_workshop_slug: workshopSlug,
       p_customer_name: form.customer_name,
       p_phone: form.phone,
@@ -90,7 +77,7 @@ export default function PublicBooking({ workshopSlug }) {
       p_model: form.model,
       p_motorcycle_year: form.motorcycle_year ? Number(form.motorcycle_year) : null,
       p_plate: form.plate,
-      p_service: form.service,
+      p_service_id: form.service_id,
       p_date: form.date,
       p_time: form.time,
       p_customer_notes: form.notes
@@ -102,6 +89,9 @@ export default function PublicBooking({ workshopSlug }) {
     }
     setSuccess(true)
   }
+
+  const minimumDate = new Date().toLocaleDateString('en-CA')
+  const maximumDate = new Date(Date.now() + (Number(config?.maximum_booking_days) || 60) * 86400000).toLocaleDateString('en-CA')
 
   if (loading) return <div {...shellProps}><div className="public-card">Cargando agenda…</div></div>
 
@@ -137,10 +127,10 @@ export default function PublicBooking({ workshopSlug }) {
             <label>Modelo<input required value={form.model} onChange={e => update('model', e.target.value)} /></label>
             <label>Año<input type="number" min="1950" max="2035" value={form.motorcycle_year} onChange={e => update('motorcycle_year', e.target.value)} /></label>
             <label>Placa (opcional)<input value={form.plate} onChange={e => update('plate', e.target.value)} /></label>
-            <label className="wide">Servicio solicitado<select required value={form.service} onChange={e => update('service', e.target.value)}><option value="">Selecciona…</option><option>Mantenimiento general</option><option>Cambio de aceite</option><option>Diagnóstico</option><option>Electricidad</option><option>Frenos</option><option>Suspensión</option><option>Motor</option><option>Instalación de accesorios</option><option>Otro</option></select></label>
+            <label className="wide">Servicio solicitado<select required value={form.service_id} onChange={e => update('service_id', e.target.value)}><option value="">Selecciona…</option>{(config?.services || []).map(service => <option value={service.id} key={service.id}>{service.name} · aproximadamente {service.duration_minutes} min</option>)}</select></label>
             <h2><span><CalendarDays size={21} /> Fecha y hora</span></h2>
-            <label>Fecha<input required type="date" min={new Date().toLocaleDateString('en-CA')} value={form.date} onChange={e => update('date', e.target.value)} /></label>
-            <label>Hora<select required disabled={!form.date || !slots.length} value={form.time} onChange={e => update('time', e.target.value)}><option value="">{!form.date ? 'Primero selecciona fecha' : slots.length ? 'Selecciona…' : 'No hay espacios disponibles'}</option>{slots.map(slot => <option key={slot} value={slot}>{timeLabel(slot)}</option>)}</select></label>
+            <label>Fecha<input required type="date" min={minimumDate} max={maximumDate} disabled={!form.service_id} value={form.date} onChange={e => update('date', e.target.value)} /></label>
+            <label>Hora<select required disabled={!form.date || loadingSlots || !slots.length} value={form.time} onChange={e => update('time', e.target.value)}><option value="">{!form.service_id ? 'Primero selecciona servicio' : !form.date ? 'Selecciona la fecha' : loadingSlots ? 'Buscando espacios…' : slots.length ? 'Selecciona…' : 'No hay espacios disponibles'}</option>{slots.map(slot => <option key={slot} value={slot}>{timeLabel(slot)}</option>)}</select></label>
             <label className="wide">Describe el trabajo o la falla<textarea value={form.notes} onChange={e => update('notes', e.target.value)} /></label>
             {message && <div className="alert error wide">{message}</div>}
             <button className="primary wide" disabled={saving || !form.time}><Clock3 size={18} />{saving ? 'Registrando…' : 'Solicitar cita'}</button>
