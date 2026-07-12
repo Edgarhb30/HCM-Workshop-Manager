@@ -6,3 +6,5 @@ dist
 *.jks
 *.keystore
 android/.idea/
+*.apk
+android/app/release/
