@@ -637,3 +637,16 @@
 .notification-list > button.unread { background: color-mix(in srgb, var(--primary-color, #111) 8%, var(--surface-color, #fff)); }
 .notification-list > button span, .notification-list > button small { opacity: .72; }
 .notification-list > p { padding: 22px; text-align: center; opacity: .7; }
+.diagnostic-section > h3 { display: flex; align-items: center; gap: 8px; }
+.diagnostic-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 14px 0 20px; }
+.diagnostic-form label { display: grid; gap: 6px; font-weight: 700; }
+.diagnostic-form .wide { grid-column: 1 / -1; }
+.diagnostic-visible { display: flex !important; grid-template-columns: none !important; align-items: center; }
+.diagnostic-visible input { width: auto; }
+.diagnostic-history { display: grid; gap: 10px; }
+.diagnostic-result { padding: 13px; border: 1px solid var(--border-color, #ddd); border-left: 4px solid #888; border-radius: 12px; }
+.diagnostic-result.correcto { border-left-color: #16803a; }
+.diagnostic-result.incorrecto { border-left-color: #b42318; }
+.diagnostic-result > div { display: grid; gap: 3px; }
+.diagnostic-result p { margin: 8px 0 0; }
+@media (max-width: 700px) { .diagnostic-form { grid-template-columns: 1fr; } .diagnostic-form .wide { grid-column: auto; } }

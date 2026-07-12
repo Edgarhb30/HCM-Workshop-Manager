@@ -29,6 +29,11 @@ const emptyDelivery = {
   customer_conformity: true, delivery_notes: ''
 }
 
+const emptyDiagnostic = {
+  symptom: '', test_name: '', component: '', expected_value: '', measured_value: '',
+  result: 'Pendiente', finding: '', probable_cause: '', recommendation: '', client_visible: false
+}
+
 const statusClass = status =>
   status.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replaceAll(' ', '-')
 
@@ -62,6 +67,9 @@ export default function WorkOrders({ workshop = null, branding = null, role, use
   const [orderEvents, setOrderEvents] = useState([])
   const [eventForm, setEventForm] = useState({ title: '', description: '', client_visible: false })
   const [savingEvent, setSavingEvent] = useState(false)
+  const [diagnostics, setDiagnostics] = useState([])
+  const [diagnosticForm, setDiagnosticForm] = useState(emptyDiagnostic)
+  const [savingDiagnostic, setSavingDiagnostic] = useState(false)
 
   useEffect(() => { loadOrders() }, [])
 
@@ -148,8 +156,10 @@ export default function WorkOrders({ workshop = null, branding = null, role, use
     setDeliverySignature('')
     setOrderEvents([])
     setEventForm({ title: '', description: '', client_visible: false })
+    setDiagnostics([])
+    setDiagnosticForm(emptyDiagnostic)
 
-    const [photosResult, signaturesResult, deliveryResult, invoicesResult, eventsResult] = await Promise.all([
+    const [photosResult, signaturesResult, deliveryResult, invoicesResult, eventsResult, diagnosticsResult] = await Promise.all([
       supabase
         .from('work_order_photos')
         .select('*')
@@ -174,6 +184,11 @@ export default function WorkOrders({ workshop = null, branding = null, role, use
         .from('work_order_events')
         .select('*')
         .eq('work_order_id', order.id)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('diagnostic_tests')
+        .select('*')
+        .eq('work_order_id', order.id)
         .order('created_at', { ascending: false })
     ])
 
@@ -182,6 +197,7 @@ export default function WorkOrders({ workshop = null, branding = null, role, use
     if (deliveryResult.error) alert(deliveryResult.error.message)
     if (invoicesResult.error) alert(invoicesResult.error.message)
     if (eventsResult.error) alert(eventsResult.error.message)
+    if (diagnosticsResult.error) alert(diagnosticsResult.error.message)
 
     const signRows = async rows => Promise.all(
       (rows || []).map(async row => {
@@ -204,7 +220,32 @@ export default function WorkOrders({ workshop = null, branding = null, role, use
       amount: balance
     })
     setOrderEvents(eventsResult.data || [])
+    setDiagnostics(diagnosticsResult.data || [])
     setLoadingMedia(false)
+  }
+
+  async function saveDiagnostic(event) {
+    event.preventDefault()
+    if (!selected || !diagnosticForm.test_name.trim()) return
+    setSavingDiagnostic(true)
+    const { data, error } = await supabase.from('diagnostic_tests').insert({
+      workshop_id: selected.workshop_id,
+      work_order_id: selected.id,
+      ...diagnosticForm,
+      symptom: diagnosticForm.symptom.trim() || null,
+      test_name: diagnosticForm.test_name.trim(),
+      component: diagnosticForm.component.trim() || null,
+      expected_value: diagnosticForm.expected_value.trim() || null,
+      measured_value: diagnosticForm.measured_value.trim() || null,
+      finding: diagnosticForm.finding.trim() || null,
+      probable_cause: diagnosticForm.probable_cause.trim() || null,
+      recommendation: diagnosticForm.recommendation.trim() || null
+    }).select().single()
+    setSavingDiagnostic(false)
+    if (error) return alert(`No se pudo guardar la prueba: ${error.message}`)
+    setDiagnostics(current => [data, ...current])
+    setDiagnosticForm(emptyDiagnostic)
+    loadOrderEvents(selected.id)
   }
 
   async function addTimelineEvent(event) {
@@ -510,6 +551,35 @@ export default function WorkOrders({ workshop = null, branding = null, role, use
             )}
 
             <section className="detail-section"><h3>Motivo del ingreso</h3><p>{selected.intake_notes || 'Sin información.'}</p></section>
+
+            <section className="detail-section diagnostic-section">
+              <h3><Wrench size={19} /> Diagnóstico técnico</h3>
+              {canEdit && role !== 'reception' && (
+                <form className="diagnostic-form" onSubmit={saveDiagnostic}>
+                  <label className="wide">Síntoma observado<input value={diagnosticForm.symptom} onChange={event => setDiagnosticForm({ ...diagnosticForm, symptom: event.target.value })} /></label>
+                  <label>Prueba realizada<input required value={diagnosticForm.test_name} onChange={event => setDiagnosticForm({ ...diagnosticForm, test_name: event.target.value })} /></label>
+                  <label>Componente o punto medido<input value={diagnosticForm.component} onChange={event => setDiagnosticForm({ ...diagnosticForm, component: event.target.value })} /></label>
+                  <label>Valor esperado<input placeholder="Ejemplo: 5 V" value={diagnosticForm.expected_value} onChange={event => setDiagnosticForm({ ...diagnosticForm, expected_value: event.target.value })} /></label>
+                  <label>Valor obtenido<input placeholder="Ejemplo: 4.98 V" value={diagnosticForm.measured_value} onChange={event => setDiagnosticForm({ ...diagnosticForm, measured_value: event.target.value })} /></label>
+                  <label>Resultado<select value={diagnosticForm.result} onChange={event => setDiagnosticForm({ ...diagnosticForm, result: event.target.value })}><option>Correcto</option><option>Incorrecto</option><option>Pendiente</option><option>No aplica</option></select></label>
+                  <label className="wide">Hallazgo<textarea rows="2" value={diagnosticForm.finding} onChange={event => setDiagnosticForm({ ...diagnosticForm, finding: event.target.value })} /></label>
+                  <label className="wide">Posible causa<textarea rows="2" value={diagnosticForm.probable_cause} onChange={event => setDiagnosticForm({ ...diagnosticForm, probable_cause: event.target.value })} /></label>
+                  <label className="wide">Recomendación<textarea rows="2" value={diagnosticForm.recommendation} onChange={event => setDiagnosticForm({ ...diagnosticForm, recommendation: event.target.value })} /></label>
+                  <label className="wide diagnostic-visible"><input type="checkbox" checked={diagnosticForm.client_visible} onChange={event => setDiagnosticForm({ ...diagnosticForm, client_visible: event.target.checked })} />Mostrar esta prueba en la línea de tiempo del cliente</label>
+                  <button className="primary" disabled={savingDiagnostic}>{savingDiagnostic ? 'Guardando prueba…' : 'Guardar prueba técnica'}</button>
+                </form>
+              )}
+              <div className="diagnostic-history">
+                {diagnostics.map(test => <article key={test.id} className={`diagnostic-result ${test.result.toLowerCase().replace(' ', '-')}`}>
+                  <div><strong>{test.test_name}</strong><span>{test.component || 'Sin componente especificado'} · {test.result}</span><small>{formatDate(test.created_at)} · {test.technician_name}</small></div>
+                  {(test.expected_value || test.measured_value) && <p>Esperado: <b>{test.expected_value || '—'}</b> · Obtenido: <b>{test.measured_value || '—'}</b></p>}
+                  {test.finding && <p><b>Hallazgo:</b> {test.finding}</p>}
+                  {test.probable_cause && <p><b>Posible causa:</b> {test.probable_cause}</p>}
+                  {test.recommendation && <p><b>Recomendación:</b> {test.recommendation}</p>}
+                </article>)}
+                {!diagnostics.length && <p className="empty compact-empty">Todavía no hay pruebas técnicas registradas.</p>}
+              </div>
+            </section>
             <section className="detail-section">
               <h3>Diagnóstico y notas internas</h3>
               <p className="muted">Este contenido es privado para el taller.</p>
