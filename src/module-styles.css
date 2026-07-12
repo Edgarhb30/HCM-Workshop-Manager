@@ -165,7 +165,7 @@
 .quote-form .wide { grid-column: 1 / -1; }
 .quote-items-heading { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .quote-items-heading h3 { margin: 0; }
-.quote-item-row { display: grid; grid-template-columns: 145px minmax(190px, 1fr) 90px 140px 120px 42px; gap: 8px; align-items: center; margin-top: 9px; }
+.quote-item-row { display: grid; grid-template-columns: 125px 210px minmax(180px, 1fr) 80px 125px 110px 42px; gap: 8px; align-items: center; margin-top: 9px; }
 .quote-item-row > strong { text-align: right; }
 .quote-total-card { display: grid; grid-template-columns: auto repeat(4, 1fr); gap: 15px; align-items: center; background: #191d20; border: 1px solid #71591d; border-radius: 12px; padding: 15px; }
 .quote-total-card > svg { color: #f4b51c; }
@@ -192,6 +192,8 @@
 .quote-detail-totals { display: grid; gap: 7px; background: #111417; border-radius: 11px; padding: 14px; }
 .quote-detail-totals > span { display: flex; justify-content: space-between; color: #aeb6bd; }
 .quote-detail-totals .grand-total { color: #f4b51c; font-size: 1.15rem; border-top: 1px solid #30363c; padding-top: 9px; }
+.consume-inventory-button { display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%; margin-top: 14px; border: 1px solid #71591d; background: #211d13; color: #f4b51c; border-radius: 10px; padding: 12px 15px; font-weight: 850; cursor: pointer; }
+.consume-inventory-button:disabled { opacity: .6; cursor: wait; }
 .inventory-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 11px; margin-bottom: 18px; }
 .inventory-summary article { display: grid; grid-template-columns: auto 1fr; gap: 3px 9px; background: #14181b; border: 1px solid #30363c; border-radius: 12px; padding: 13px; }
 .inventory-summary article.warning { background: #211518; border-color: #713237; }

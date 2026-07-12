@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Calculator,
+  Boxes,
   FileText,
   MessageCircle,
   Plus,
@@ -12,6 +13,7 @@ import { supabase } from '../lib/supabase'
 
 const emptyItem = () => ({
   item_type: 'Repuesto',
+  product_id: '',
   description: '',
   quantity: 1,
   unit_price: ''
@@ -33,10 +35,12 @@ const todayPlus = days => {
 export default function Quotes() {
   const [quotes, setQuotes] = useState([])
   const [orders, setOrders] = useState([])
+  const [products, setProducts] = useState([])
   const [search, setSearch] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [selected, setSelected] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [consuming, setConsuming] = useState(false)
   const [form, setForm] = useState({
     work_order_id: '',
     discount: 0,
@@ -49,12 +53,15 @@ export default function Quotes() {
   useEffect(() => { load() }, [])
 
   async function load() {
-    const [quotesResult, ordersResult] = await Promise.all([
+    const [quotesResult, ordersResult, productsResult] = await Promise.all([
       supabase
         .from('quotes')
         .select(`
           *,
-          items:quote_items(*),
+          items:quote_items(
+            *,
+            product:inventory_products(id, name, sku, stock, unit, sale_price)
+          ),
           work_order:work_orders(
             order_number,
             customer:customers(full_name, phone),
@@ -71,13 +78,20 @@ export default function Quotes() {
           customer:customers(full_name, phone),
           motorcycle:motorcycles(brand, model, plate)
         `)
-        .order('received_at', { ascending: false })
+        .order('received_at', { ascending: false }),
+      supabase
+        .from('inventory_products')
+        .select('id, sku, name, stock, unit, sale_price, active')
+        .eq('active', true)
+        .order('name')
     ])
 
     if (quotesResult.error) alert(quotesResult.error.message)
     if (ordersResult.error) alert(ordersResult.error.message)
+    if (productsResult.error) alert(productsResult.error.message)
     setQuotes(quotesResult.data || [])
     setOrders(ordersResult.data || [])
+    setProducts(productsResult.data || [])
   }
 
   const totals = useMemo(() => {
@@ -119,6 +133,38 @@ export default function Quotes() {
       ...current,
       items: current.items.map((item, itemIndex) =>
         itemIndex === index ? { ...item, [field]: value } : item
+      )
+    }))
+  }
+
+  function selectProduct(index, productId) {
+    const product = products.find(item => item.id === productId)
+    setForm(current => ({
+      ...current,
+      items: current.items.map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              product_id: productId,
+              description: product?.name || item.description,
+              unit_price: product?.sale_price ?? item.unit_price
+            }
+          : item
+      )
+    }))
+  }
+
+  function updateItemType(index, itemType) {
+    setForm(current => ({
+      ...current,
+      items: current.items.map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              item_type: itemType,
+              product_id: itemType === 'Repuesto' ? item.product_id : ''
+            }
+          : item
       )
     }))
   }
@@ -176,6 +222,9 @@ export default function Quotes() {
         validItems.map(item => ({
           quote_id: quote.id,
           item_type: item.item_type,
+          product_id: item.item_type === 'Repuesto'
+            ? item.product_id || null
+            : null,
           description: item.description.trim(),
           quantity: Number(item.quantity),
           unit_price: Number(item.unit_price || 0)
@@ -206,7 +255,10 @@ export default function Quotes() {
       .eq('id', quote.id)
       .select(`
         *,
-        items:quote_items(*),
+        items:quote_items(
+          *,
+          product:inventory_products(id, name, sku, stock, unit, sale_price)
+        ),
         work_order:work_orders(
           order_number,
           customer:customers(full_name, phone),
@@ -218,6 +270,37 @@ export default function Quotes() {
     if (error) return alert(error.message)
     setQuotes(current => current.map(item => item.id === data.id ? data : item))
     setSelected(data)
+  }
+
+  async function consumeInventory(quote) {
+    const pendingItems = (quote.items || []).filter(
+      item => item.product_id && !item.inventory_deducted
+    )
+
+    if (!pendingItems.length) {
+      alert('Este presupuesto no tiene repuestos pendientes de descontar.')
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Se descontarán ${pendingItems.length} repuestos del inventario y quedarán asociados a ${quote.work_order?.order_number}. ¿Continuar?`
+    )
+    if (!confirmed) return
+
+    setConsuming(true)
+    const { data, error } = await supabase.rpc('consume_quote_inventory', {
+      p_quote_id: quote.id
+    })
+    setConsuming(false)
+
+    if (error) {
+      alert(`No se pudo descontar el inventario: ${error.message}`)
+      return
+    }
+
+    alert(`${data} repuestos fueron descontados correctamente.`)
+    setSelected(null)
+    load()
   }
 
   function whatsappLink(quote) {
@@ -264,8 +347,20 @@ export default function Quotes() {
               <div className="quote-items-heading"><h3>Líneas del presupuesto</h3><button className="secondary compact" type="button" onClick={() => setForm({ ...form, items: [...form.items, emptyItem()] })}><Plus size={16} />Agregar línea</button></div>
               {form.items.map((item, index) => (
                 <div className="quote-item-row" key={index}>
-                  <select value={item.item_type} onChange={event => updateItem(index, 'item_type', event.target.value)}>
+                  <select value={item.item_type} onChange={event => updateItemType(index, event.target.value)}>
                     <option>Mano de obra</option><option>Repuesto</option><option>Otro</option>
+                  </select>
+                  <select
+                    disabled={item.item_type !== 'Repuesto'}
+                    value={item.product_id}
+                    onChange={event => selectProduct(index, event.target.value)}
+                  >
+                    <option value="">{item.item_type === 'Repuesto' ? 'Seleccionar inventario' : 'No aplica'}</option>
+                    {products.map(product => (
+                      <option key={product.id} value={product.id}>
+                        {product.name} · Stock {Number(product.stock).toLocaleString('es-CR')} {product.unit}
+                      </option>
+                    ))}
                   </select>
                   <input required placeholder="Descripción" value={item.description} onChange={event => updateItem(index, 'description', event.target.value)} />
                   <input required type="number" min="0.01" step="0.01" placeholder="Cantidad" value={item.quantity} onChange={event => updateItem(index, 'quantity', event.target.value)} />
@@ -325,7 +420,12 @@ export default function Quotes() {
 
             <div className="quote-detail-items">
               {(selected.items || []).map(item => (
-                <div key={item.id}><span>{item.item_type}</span><strong>{item.description}</strong><small>{item.quantity} × {money(item.unit_price)}</small><b>{money(item.line_total)}</b></div>
+                <div key={item.id}>
+                  <span>{item.item_type}{item.product ? ` · Stock ${Number(item.product.stock).toLocaleString('es-CR')} ${item.product.unit}` : ''}</span>
+                  <strong>{item.description}</strong>
+                  <small>{item.quantity} × {money(item.unit_price)}{item.product_id ? ` · ${item.inventory_deducted ? 'Ya descontado' : 'Pendiente de instalar'}` : ''}</small>
+                  <b>{money(item.line_total)}</b>
+                </div>
               ))}
             </div>
 
@@ -337,6 +437,18 @@ export default function Quotes() {
             </div>
 
             {selected.notes && <section className="detail-section"><h3>Notas</h3><p>{selected.notes}</p></section>}
+
+            {selected.status === 'Aprobado' && (selected.items || []).some(item => item.product_id && !item.inventory_deducted) && (
+              <button
+                className="consume-inventory-button"
+                type="button"
+                disabled={consuming}
+                onClick={() => consumeInventory(selected)}
+              >
+                <Boxes size={19} />
+                {consuming ? 'Descontando inventario...' : 'Descontar repuestos instalados'}
+              </button>
+            )}
 
             {selected.work_order?.customer?.phone && (
               <a className="whatsapp-action" href={whatsappLink(selected)} target="_blank" rel="noreferrer"><MessageCircle size={18} />Enviar por WhatsApp</a>
