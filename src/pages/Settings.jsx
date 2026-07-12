@@ -5,7 +5,8 @@ import {
   CalendarClock,
   CheckCircle2,
   Save,
-  ShieldCheck
+  ShieldCheck,
+  Plus
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -35,6 +36,8 @@ export default function Settings({ workshop, role, onWorkshopUpdated, onBranding
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [settingsId, setSettingsId] = useState(null)
+  const [services, setServices] = useState([])
+  const [newService, setNewService] = useState({ name: '', duration_minutes: 60 })
   const [form, setForm] = useState({
     name: workshop?.name || '',
     timezone: workshop?.timezone || 'America/Costa_Rica',
@@ -50,6 +53,9 @@ export default function Settings({ workshop, role, onWorkshopUpdated, onBranding
     appointment_slot_minutes: 60,
     manual_appointment_confirmation: true,
     public_booking_enabled: true,
+    minimum_booking_notice_hours: 2,
+    maximum_booking_days: 60,
+    maximum_appointments_per_day: '',
     oil_change_interval_km: 3000,
     business_hours: defaultHours,
     theme_mode: 'light',
@@ -66,11 +72,11 @@ export default function Settings({ workshop, role, onWorkshopUpdated, onBranding
     if (!workshop?.id) return
     setLoading(true)
 
-    const { data, error } = await supabase
-      .from('workshop_settings')
-      .select('*')
-      .eq('workshop_id', workshop.id)
-      .single()
+    const [settingsResult, servicesResult] = await Promise.all([
+      supabase.from('workshop_settings').select('*').eq('workshop_id', workshop.id).single(),
+      supabase.from('appointment_services').select('*').eq('workshop_id', workshop.id).order('name')
+    ])
+    const { data, error } = settingsResult
 
     if (error) {
       alert(error.message)
@@ -91,6 +97,9 @@ export default function Settings({ workshop, role, onWorkshopUpdated, onBranding
         appointment_slot_minutes: data.appointment_slot_minutes ?? 60,
         manual_appointment_confirmation: data.manual_appointment_confirmation,
         public_booking_enabled: data.public_booking_enabled,
+        minimum_booking_notice_hours: data.minimum_booking_notice_hours ?? 2,
+        maximum_booking_days: data.maximum_booking_days ?? 60,
+        maximum_appointments_per_day: data.maximum_appointments_per_day ?? '',
         oil_change_interval_km: data.oil_change_interval_km ?? 3000,
         business_hours: { ...defaultHours, ...(data.business_hours || {}) },
         theme_mode: data.theme_mode || 'light',
@@ -101,7 +110,26 @@ export default function Settings({ workshop, role, onWorkshopUpdated, onBranding
         text_color: data.text_color || '#181818'
       })
     }
+    if (servicesResult.error) alert(servicesResult.error.message)
+    else setServices(servicesResult.data || [])
     setLoading(false)
+  }
+
+  function updateService(id, field, value) {
+    setSaved(false)
+    setServices(current => current.map(service => service.id === id ? { ...service, [field]: value } : service))
+  }
+
+  async function addService() {
+    if (!newService.name.trim()) return
+    const { data, error } = await supabase.from('appointment_services').insert({
+      workshop_id: workshop.id,
+      name: newService.name.trim(),
+      duration_minutes: Number(newService.duration_minutes)
+    }).select().single()
+    if (error) return alert(`No se pudo agregar el servicio: ${error.message}`)
+    setServices(current => [...current, data].sort((a, b) => a.name.localeCompare(b.name)))
+    setNewService({ name: '', duration_minutes: 60 })
   }
 
   function update(field, value) {
@@ -152,6 +180,9 @@ export default function Settings({ workshop, role, onWorkshopUpdated, onBranding
           appointment_slot_minutes: Number(form.appointment_slot_minutes),
           manual_appointment_confirmation: form.manual_appointment_confirmation,
           public_booking_enabled: form.public_booking_enabled,
+          minimum_booking_notice_hours: Number(form.minimum_booking_notice_hours),
+          maximum_booking_days: Number(form.maximum_booking_days),
+          maximum_appointments_per_day: form.maximum_appointments_per_day ? Number(form.maximum_appointments_per_day) : null,
           oil_change_interval_km: Number(form.oil_change_interval_km),
           business_hours: form.business_hours,
           theme_mode: form.theme_mode,
@@ -167,8 +198,18 @@ export default function Settings({ workshop, role, onWorkshopUpdated, onBranding
         .single()
     ])
 
+    const serviceResults = await Promise.all(services.map(service => supabase
+      .from('appointment_services')
+      .update({
+        name: service.name.trim(),
+        duration_minutes: Number(service.duration_minutes),
+        public_enabled: service.public_enabled,
+        active: service.active
+      })
+      .eq('id', service.id)))
+
     setSaving(false)
-    const error = workshopResult.error || settingsResult.error
+    const error = workshopResult.error || settingsResult.error || serviceResults.find(result => result.error)?.error
     if (error) {
       alert(`No se pudo guardar la configuración: ${error.message}`)
       return
@@ -222,6 +263,9 @@ export default function Settings({ workshop, role, onWorkshopUpdated, onBranding
             <label>Moneda<select disabled={!canEdit} value={form.currency} onChange={event => update('currency', event.target.value)}><option value="CRC">Colón costarricense (CRC)</option><option value="USD">Dólar (USD)</option></select></label>
             <label className="settings-toggle"><input disabled={!canEdit} type="checkbox" checked={form.manual_appointment_confirmation} onChange={event => update('manual_appointment_confirmation', event.target.checked)} />Confirmación manual de citas</label>
             <label className="settings-toggle"><input disabled={!canEdit} type="checkbox" checked={form.public_booking_enabled} onChange={event => update('public_booking_enabled', event.target.checked)} />Reservas públicas activas</label>
+            <label>Anticipación mínima (horas)<input disabled={!canEdit} type="number" min="0" value={form.minimum_booking_notice_hours} onChange={event => update('minimum_booking_notice_hours', event.target.value)} /></label>
+            <label>Máximo de días futuros<input disabled={!canEdit} type="number" min="1" value={form.maximum_booking_days} onChange={event => update('maximum_booking_days', event.target.value)} /></label>
+            <label>Máximo de citas por día<input disabled={!canEdit} type="number" min="1" placeholder="Sin límite" value={form.maximum_appointments_per_day} onChange={event => update('maximum_appointments_per_day', event.target.value)} /></label>
           </div>
         </section>
       </div>
@@ -239,6 +283,19 @@ export default function Settings({ workshop, role, onWorkshopUpdated, onBranding
           </div>
           <div className="branding-preview" style={{ background: form.background_color, color: form.text_color }}><div style={{ background: form.primary_color, color: '#fff' }}><strong>{form.name}</strong><span>Workshop Manager</span></div><article style={{ background: form.surface_color }}><small style={{ color: form.accent_color }}>VISTA PREVIA</small><h3>Panel del taller</h3><button type="button" style={{ background: form.primary_color, color: '#fff' }}>Acción principal</button></article></div>
         </div>
+      </section>
+
+      <section className="panel settings-section booking-services-settings">
+        <div className="settings-section-title"><CalendarClock size={22} /><div><h3>Servicios de la agenda</h3><p>Configura cuánto espacio ocupa cada cita; no es el tiempo prometido de reparación.</p></div></div>
+        <div className="booking-services-list">
+          {services.map(service => <article key={service.id}>
+            <input disabled={!canEdit} value={service.name} onChange={event => updateService(service.id, 'name', event.target.value)} />
+            <label>Espacio reservado<select disabled={!canEdit} value={service.duration_minutes} onChange={event => updateService(service.id, 'duration_minutes', event.target.value)}><option value="30">30 min</option><option value="45">45 min</option><option value="60">1 hora</option><option value="90">1 hora 30 min</option><option value="120">2 horas</option><option value="180">3 horas</option><option value="240">4 horas</option><option value="480">Día completo (8 h)</option></select></label>
+            <label><input disabled={!canEdit} type="checkbox" checked={service.public_enabled} onChange={event => updateService(service.id, 'public_enabled', event.target.checked)} />Visible al cliente</label>
+            <label><input disabled={!canEdit} type="checkbox" checked={service.active} onChange={event => updateService(service.id, 'active', event.target.checked)} />Activo</label>
+          </article>)}
+        </div>
+        {canEdit && <div className="new-booking-service"><input placeholder="Nuevo servicio" value={newService.name} onChange={event => setNewService({ ...newService, name: event.target.value })} /><select value={newService.duration_minutes} onChange={event => setNewService({ ...newService, duration_minutes: event.target.value })}><option value="30">30 min</option><option value="60">1 hora</option><option value="90">1 hora 30 min</option><option value="120">2 horas</option><option value="180">3 horas</option></select><button className="secondary" type="button" onClick={addService}><Plus size={17} />Agregar</button></div>}
       </section>
 
       <section className="panel settings-section">

@@ -649,4 +649,12 @@
 .diagnostic-result.incorrecto { border-left-color: #b42318; }
 .diagnostic-result > div { display: grid; gap: 3px; }
 .diagnostic-result p { margin: 8px 0 0; }
+.booking-services-list { display: grid; gap: 10px; }
+.booking-services-list article { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(170px, auto) auto auto; gap: 12px; align-items: center; padding: 12px; border: 1px solid var(--border-color, #ddd); border-radius: 12px; }
+.booking-services-list label { display: flex; align-items: center; gap: 6px; }
+.booking-services-list label:first-of-type { display: grid; }
+.booking-services-list input[type="checkbox"] { width: auto; }
+.new-booking-service { display: flex; gap: 10px; margin-top: 14px; }
+.new-booking-service input { flex: 1; }
+@media (max-width: 850px) { .booking-services-list article { grid-template-columns: 1fr; } .new-booking-service { flex-direction: column; } }
 @media (max-width: 700px) { .diagnostic-form { grid-template-columns: 1fr; } .diagnostic-form .wide { grid-column: auto; } }
