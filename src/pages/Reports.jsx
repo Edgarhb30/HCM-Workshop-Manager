@@ -200,7 +200,7 @@ export default function Reports() {
         <div>
           <span className="eyebrow">REPORTES</span>
           <h2>Rendimiento del taller</h2>
-          <p className="muted">Información financiera y operativa aislada para Herrera Custom Motorcycle.</p>
+          <p className="muted">Información financiera y operativa aislada para este taller.</p>
         </div>
         <button className="secondary compact" type="button" onClick={exportCsv}><Download size={17} />Exportar CSV</button>
       </div>

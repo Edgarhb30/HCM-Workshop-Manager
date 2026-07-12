@@ -182,7 +182,7 @@ export default function Invoices({ workshop = null, branding = null, role }) {
     const fullPhone = phone.startsWith('506') ? phone : `506${phone}`
     const balance = Number(invoice.total) - Number(invoice.amount_paid)
     const message = encodeURIComponent(
-      `Hola ${invoice.work_order?.customer?.full_name || ''}. Le compartimos el resumen ${invoice.invoice_number} de su ${invoice.work_order?.motorcycle?.brand || ''} ${invoice.work_order?.motorcycle?.model || ''}. Total: ${money(invoice.total)}. Saldo pendiente: ${money(balance)}. Herrera Custom Motorcycle.`
+      `Hola ${invoice.work_order?.customer?.full_name || ''}. Le compartimos el resumen ${invoice.invoice_number} de su ${invoice.work_order?.motorcycle?.brand || ''} ${invoice.work_order?.motorcycle?.model || ''}. Total: ${money(invoice.total)}. Saldo pendiente: ${money(balance)}. ${workshop?.name || 'El taller'}.`
     )
     return `https://wa.me/${fullPhone}?text=${message}`
   }

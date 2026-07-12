@@ -1,25 +1,25 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 
 import Sidebar from './components/Sidebar'
 import Header from './components/Header'
 
 import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import Agenda from './pages/Agenda'
-import Customers from './pages/Customers'
-import Motorcycles from './pages/Motorcycles'
-import Reception from './pages/Reception'
-import WorkOrders from './pages/WorkOrders'
-import Quotes from './pages/Quotes'
-import Inventory from './pages/Inventory'
-import Invoices from './pages/Invoices'
-import Reports from './pages/Reports'
-import Settings from './pages/Settings'
-import ComingSoon from './pages/ComingSoon'
-import PublicBooking from './pages/PublicBooking'
-import ClientPortal from './pages/ClientPortal'
-import Team from './pages/Team'
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Agenda = lazy(() => import('./pages/Agenda'))
+const Customers = lazy(() => import('./pages/Customers'))
+const Motorcycles = lazy(() => import('./pages/Motorcycles'))
+const Reception = lazy(() => import('./pages/Reception'))
+const WorkOrders = lazy(() => import('./pages/WorkOrders'))
+const Quotes = lazy(() => import('./pages/Quotes'))
+const Inventory = lazy(() => import('./pages/Inventory'))
+const Invoices = lazy(() => import('./pages/Invoices'))
+const Reports = lazy(() => import('./pages/Reports'))
+const Settings = lazy(() => import('./pages/Settings'))
+const ComingSoon = lazy(() => import('./pages/ComingSoon'))
+const PublicBooking = lazy(() => import('./pages/PublicBooking'))
+const ClientPortal = lazy(() => import('./pages/ClientPortal'))
+const Team = lazy(() => import('./pages/Team'))
 import { defaultBranding, themeVariables } from './lib/theme'
 import { canAccessPage, isReadOnlyRole, roleLabels } from './lib/permissions'
 
@@ -128,11 +128,11 @@ export default function App() {
   }, [membership?.workshop?.id])
 
   if (publicPath === '/reservar') {
-    return <PublicBooking workshopSlug="herrera-custom-motorcycle" />
+    return <Suspense fallback={<div className="boot">Cargando agenda…</div>}><PublicBooking workshopSlug="herrera-custom-motorcycle" /></Suspense>
   }
 
   if (publicPath === '/mi-moto') {
-    return <ClientPortal workshopSlug="herrera-custom-motorcycle" />
+    return <Suspense fallback={<div className="boot">Cargando Mi moto…</div>}><ClientPortal workshopSlug="herrera-custom-motorcycle" /></Suspense>
   }
 
   if (loading) {
@@ -184,8 +184,8 @@ export default function App() {
         workshop={membership.workshop}
       />
     ),
-    agenda: <Agenda onReceive={receiveAppointment} role={membership.role} />,
-    clientes: <Customers role={membership.role} />,
+    agenda: <Agenda onReceive={receiveAppointment} role={membership.role} workshop={membership.workshop} />,
+    clientes: <Customers role={membership.role} workshop={membership.workshop} />,
     motos: <Motorcycles role={membership.role} />,
     recepcion: (
       <Reception
@@ -264,7 +264,7 @@ export default function App() {
               Modo de consulta: puedes revisar la información, pero no modificarla.
             </div>
           )}
-          {content}
+          <Suspense fallback={<div className="boot">Abriendo módulo…</div>}>{content}</Suspense>
         </main>
       </div>
     </div>

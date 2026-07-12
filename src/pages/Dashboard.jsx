@@ -169,7 +169,7 @@ export default function Dashboard({ userName, workshop }) {
     const fullPhone = phone.startsWith('506') ? phone : `506${phone}`
     const motorcycle = `${alert.motorcycle?.brand || ''} ${alert.motorcycle?.model || ''}`.trim()
     const message = encodeURIComponent(
-      `Hola ${alert.motorcycle?.customer?.full_name || ''}. Según el historial de su ${motorcycle}, ya se aproxima o corresponde realizar: ${service}. Si gusta, podemos agendarle una cita. Saludos, Herrera Custom Motorcycle.`
+      `Hola ${alert.motorcycle?.customer?.full_name || ''}. Según el historial de su ${motorcycle}, ya se aproxima o corresponde realizar: ${service}. Si gusta, podemos agendarle una cita. Saludos, ${workshop?.name || 'el taller'}.`
     )
     return `https://wa.me/${fullPhone}?text=${message}`
   }

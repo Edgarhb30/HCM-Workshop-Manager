@@ -28,7 +28,7 @@ const formatDate = value => value
     )
   : '—'
 
-export default function Customers({ role }) {
+export default function Customers({ role, workshop }) {
   const canEdit = ['owner', 'admin', 'reception'].includes(role)
   const [rows, setRows] = useState([])
   const [search, setSearch] = useState('')
@@ -280,7 +280,7 @@ export default function Customers({ role }) {
 
             <a
               className="whatsapp-action"
-              href={whatsappLink(selected.phone, `Hola ${selected.full_name}. Le escribimos de Herrera Custom Motorcycle.`)}
+              href={whatsappLink(selected.phone, `Hola ${selected.full_name}. Le escribimos de ${workshop?.name || 'el taller'}.`)}
               target="_blank"
               rel="noreferrer"
             >

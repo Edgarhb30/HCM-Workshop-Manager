@@ -29,7 +29,7 @@ function viewRange(view, reference) {
   return [localDate(new Date(date.getFullYear(), date.getMonth(), 1)), localDate(new Date(date.getFullYear(), date.getMonth() + 1, 0))]
 }
 
-export default function Agenda({ onReceive, role }) {
+export default function Agenda({ onReceive, role, workshop }) {
   const canManage = ['owner', 'admin', 'reception'].includes(role)
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
@@ -177,7 +177,7 @@ export default function Agenda({ onReceive, role }) {
     const phone = String(appointment.phone || '').replace(/\D/g, '')
     const fullPhone = phone.startsWith('506') ? phone : `506${phone}`
     const message = encodeURIComponent(
-      `Hola ${appointment.customer_name}. Le escribimos de Herrera Custom Motorcycle sobre su cita del ${appointment.appointment_date} a las ${String(appointment.appointment_time).slice(0, 5)}.`
+      `Hola ${appointment.customer_name}. Le escribimos de ${workshop?.name || 'el taller'} sobre su cita del ${appointment.appointment_date} a las ${String(appointment.appointment_time).slice(0, 5)}.`
     )
     return `https://wa.me/${fullPhone}?text=${message}`
   }

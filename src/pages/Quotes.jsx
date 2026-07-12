@@ -314,7 +314,7 @@ export default function Quotes({ workshop = null, branding = null, role }) {
       .map(item => `• ${item.description}: ${money(item.line_total)}`)
       .join('\n')
     const message = encodeURIComponent(
-      `Hola ${quote.work_order?.customer?.full_name || ''}. Le compartimos el presupuesto ${quote.quote_number} para su ${quote.work_order?.motorcycle?.brand || ''} ${quote.work_order?.motorcycle?.model || ''}.\n\n${lines}\n\nTotal: ${money(quote.total)}\n\nHerrera Custom Motorcycle.`
+      `Hola ${quote.work_order?.customer?.full_name || ''}. Le compartimos el presupuesto ${quote.quote_number} para su ${quote.work_order?.motorcycle?.brand || ''} ${quote.work_order?.motorcycle?.model || ''}.\n\n${lines}\n\nTotal: ${money(quote.total)}\n\n${workshop?.name || 'El taller'}.`
     )
     return `https://wa.me/${fullPhone}?text=${message}`
   }

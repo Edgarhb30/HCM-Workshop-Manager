@@ -78,7 +78,7 @@ export default function Sidebar({
       </nav>
 
       <div className="version">
-        Versión 0.2
+        Versión 0.9 RC
       </div>
     </aside>
   )
