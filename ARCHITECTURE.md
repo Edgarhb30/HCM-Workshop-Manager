@@ -482,6 +482,38 @@ Permitirá:
 
 ---
 
+# Arquitectura Multi-Taller
+
+HCM Workshop Manager estará preparado desde la base para operar múltiples talleres.
+
+Cada registro operativo tendrá un `workshop_id`. Las políticas RLS impedirán que un taller consulte o modifique información perteneciente a otro.
+
+Herrera Custom Motorcycle será el primer taller y seguirá siendo el foco hasta estabilizar la aplicación principal.
+
+Roles preparados:
+
+- Propietario (`owner`).
+- Administrador (`admin`).
+- Recepción (`reception`).
+- Mecánico (`mechanic`).
+- Solo lectura (`viewer`).
+
+El alcance actual incluye:
+
+- Talleres y miembros.
+- Roles por miembro.
+- Aislamiento de citas, clientes, motocicletas, órdenes, mantenimientos, presupuestos e inventario.
+- Selección automática de Herrera Custom Motorcycle mientras exista un solo taller operativo.
+
+Queda aplazado hasta que la aplicación principal sea estable:
+
+- HCM Platform Control Center.
+- Suscripciones y cobros SaaS.
+- Alta de nuevos talleres.
+- Administración global de la plataforma.
+
+---
+
 # Roadmap
 
 ## v0.2

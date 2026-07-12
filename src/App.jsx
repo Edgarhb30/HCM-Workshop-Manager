@@ -34,6 +34,9 @@ export default function App() {
   const [page, setPage] = useState('dashboard')
   const [menu, setMenu] = useState(false)
   const [receptionAppointment, setReceptionAppointment] = useState(null)
+  const [membership, setMembership] = useState(null)
+  const [membershipLoading, setMembershipLoading] = useState(false)
+  const [membershipError, setMembershipError] = useState('')
 
   function receiveAppointment(appointment) {
     setReceptionAppointment(appointment)
@@ -55,12 +58,66 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
+  useEffect(() => {
+    if (!session?.user?.id) {
+      setMembership(null)
+      setMembershipError('')
+      return
+    }
+
+    async function loadMembership() {
+      setMembershipLoading(true)
+      setMembershipError('')
+
+      const { data, error } = await supabase
+        .from('workshop_members')
+        .select(`
+          role,
+          active,
+          workshop:workshops(id, name, slug, timezone, currency, active)
+        `)
+        .eq('user_id', session.user.id)
+        .eq('active', true)
+        .limit(1)
+        .maybeSingle()
+
+      if (error) {
+        setMembershipError(error.message)
+      } else if (!data?.workshop?.active) {
+        setMembershipError('Tu usuario no tiene acceso a un taller activo.')
+      } else {
+        setMembership(data)
+      }
+
+      setMembershipLoading(false)
+    }
+
+    loadMembership()
+  }, [session?.user?.id])
+
   if (loading) {
     return <div className="boot">Cargando HCM…</div>
   }
 
   if (!session) {
     return <Login />
+  }
+
+  if (membershipLoading || !membership && !membershipError) {
+    return <div className="boot">Cargando taller y permisos…</div>
+  }
+
+  if (membershipError) {
+    return (
+      <div className="access-denied">
+        <span className="eyebrow">ACCESO AL TALLER</span>
+        <h1>No fue posible abrir HCM Workshop Manager</h1>
+        <p>{membershipError}</p>
+        <button className="primary" type="button" onClick={() => supabase.auth.signOut()}>
+          Cerrar sesión
+        </button>
+      </div>
+    )
   }
 
   const pages = {
@@ -102,6 +159,8 @@ export default function App() {
         <Header
           title={titles[page]}
           email={session.user.email}
+          workshop={membership.workshop}
+          role={membership.role}
           openMenu={() => setMenu(true)}
           logout={() => supabase.auth.signOut()}
         />
