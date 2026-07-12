@@ -67,10 +67,47 @@
 .compact-grid { grid-template-columns: minmax(180px, .6fr) 1.4fr; align-items: end; }
 .inspection-notes { display: grid; gap: 7px; margin-top: 14px; }
 .inspection-summary { margin: 10px 0 0; padding-left: 20px; color: #b5bdc4; line-height: 1.7; }
+.motorcycle-search { margin-bottom: 18px; }
+.moto-card-button { text-align: left; color: #fff; cursor: pointer; }
+.moto-card-button:hover { border-color: #80631b; transform: translateY(-2px); }
+.open-record { display: block; color: #f4b51c; font-size: .8rem; font-weight: 800; margin-top: 14px; }
+.motorcycle-detail { width: min(720px, 100%); }
+.motorcycle-facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 22px 0; }
+.motorcycle-facts article { display: grid; grid-template-columns: auto 1fr; gap: 3px 9px; background: #111417; border: 1px solid #30363c; border-radius: 12px; padding: 13px; }
+.motorcycle-facts svg { grid-row: 1 / 3; color: #f4b51c; }
+.motorcycle-facts span { color: #929ba4; font-size: .76rem; }
+.record-section { border-top: 1px solid #30363c; padding-top: 20px; margin-top: 22px; }
+.record-title { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+.record-title > div { display: flex; align-items: center; gap: 10px; }
+.record-title svg { color: #f4b51c; }
+.record-title h3, .record-title p { margin: 0; }
+.record-title p { color: #929ba4; font-size: .82rem; margin-top: 3px; }
+.oil-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.oil-summary > div { background: #111417; border: 1px solid #30363c; border-radius: 10px; padding: 12px; }
+.oil-summary span, .oil-summary strong { display: block; }
+.oil-summary span { color: #929ba4; font-size: .75rem; margin-bottom: 5px; }
+.oil-form { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; background: #111417; border: 1px solid #30363c; border-radius: 12px; padding: 15px; margin: 14px 0; }
+.oil-form label { display: grid; gap: 7px; color: #bec5cb; font-size: .84rem; font-weight: 650; }
+.oil-form .wide { grid-column: 1 / -1; }
+.oil-form .check-card { display: flex; flex-direction: row; align-items: center; }
+.oil-history { display: grid; gap: 8px; margin-top: 14px; }
+.oil-history article { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; border-bottom: 1px solid #30363c; padding: 11px 4px; }
+.oil-history svg { color: #f4b51c; }
+.oil-history strong, .oil-history span { display: block; }
+.oil-history span, .oil-history small { color: #929ba4; }
+.motorcycle-order-history { display: grid; gap: 9px; }
+.motorcycle-order-history article { display: grid; grid-template-columns: 1fr auto; gap: 7px; background: #111417; border: 1px solid #30363c; border-radius: 11px; padding: 13px; }
+.motorcycle-order-history strong, .motorcycle-order-history span { display: block; }
+.motorcycle-order-history span, .motorcycle-order-history p { color: #929ba4; }
+.motorcycle-order-history p { grid-column: 1 / -1; margin: 3px 0 0; }
+.compact-empty { padding: 20px; }
 
 @media (max-width: 760px) {
   .work-order-toolbar, .work-order-card, .reception-progress, .order-summary-grid { grid-template-columns: 1fr; }
   .order-detail { padding: 24px 18px; }
   .accessory-grid { grid-template-columns: 1fr 1fr; }
   .inspection-grid, .compact-grid { grid-template-columns: 1fr; }
+  .motorcycle-facts, .oil-summary, .oil-form { grid-template-columns: 1fr; }
+  .oil-form .wide { grid-column: auto; }
+  .record-title { align-items: flex-start; flex-direction: column; }
 }
