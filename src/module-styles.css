@@ -657,4 +657,15 @@
 .new-booking-service { display: flex; gap: 10px; margin-top: 14px; }
 .new-booking-service input { flex: 1; }
 @media (max-width: 850px) { .booking-services-list article { grid-template-columns: 1fr; } .new-booking-service { flex-direction: column; } }
+.agenda-heading-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.schedule-block-form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 14px; margin-bottom: 16px; border: 1px solid var(--border-color, #ddd); border-radius: 14px; }
+.schedule-block-form label { display: grid; gap: 6px; font-weight: 700; }
+.schedule-block-form .wide { grid-column: 1 / -1; }
+.schedule-block-form .block-all-day { display: flex; align-items: center; }
+.schedule-block-form .block-all-day input { width: auto; }
+.upcoming-blocks { margin-bottom: 18px; }
+.upcoming-blocks > div { display: flex; gap: 8px; flex-wrap: wrap; }
+.upcoming-blocks article { display: flex; align-items: center; gap: 9px; padding: 10px 12px; border: 1px solid var(--border-color, #ddd); border-radius: 12px; }
+.upcoming-blocks article > span { display: grid; }
+@media (max-width: 750px) { .schedule-block-form { grid-template-columns: 1fr; } .schedule-block-form .wide { grid-column: auto; } }
 @media (max-width: 700px) { .diagnostic-form { grid-template-columns: 1fr; } .diagnostic-form .wide { grid-column: auto; } }
