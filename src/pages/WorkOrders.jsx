@@ -36,10 +36,14 @@ const formatDate = value => value
   ? new Intl.DateTimeFormat('es-CR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
   : '—'
 
-export default function WorkOrders({ workshop = null, branding = null, role }) {
+export default function WorkOrders({ workshop = null, branding = null, role, userId }) {
   const canEdit = ['owner', 'admin', 'reception', 'mechanic'].includes(role)
   const canDeliver = ['owner', 'admin', 'reception'].includes(role)
+  const canAssign = ['owner', 'admin', 'reception'].includes(role)
   const [orders, setOrders] = useState([])
+  const [technicians, setTechnicians] = useState([])
+  const [mineOnly, setMineOnly] = useState(role === 'mechanic')
+  const [savingAssignment, setSavingAssignment] = useState(false)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('Todas')
   const [selected, setSelected] = useState(null)
@@ -63,17 +67,41 @@ export default function WorkOrders({ workshop = null, branding = null, role }) {
 
   async function loadOrders() {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('work_orders')
-      .select('*, customer:customers(id, full_name, phone, email), motorcycle:motorcycles(id, brand, model, plate, motorcycle_year, color, vin)')
-      .order('received_at', { ascending: false })
+    const [ordersResult, techniciansResult] = await Promise.all([
+      supabase
+        .from('work_orders')
+        .select('*, customer:customers(id, full_name, phone, email), motorcycle:motorcycles(id, brand, model, plate, motorcycle_year, color, vin), assignments:work_order_assignments(id, member:workshop_members(id, user_id, display_name, email))')
+        .order('received_at', { ascending: false }),
+      supabase
+        .from('workshop_members')
+        .select('id, user_id, display_name, email')
+        .eq('role', 'mechanic')
+        .eq('active', true)
+        .order('display_name')
+    ])
+    const { data, error } = ordersResult
 
     if (error) alert(`No se pudieron cargar las órdenes: ${error.message}`)
     else {
       setOrders(data || [])
       setSelected(current => current ? (data || []).find(order => order.id === current.id) || null : null)
     }
+    if (techniciansResult.error) alert(`No se pudieron cargar los técnicos: ${techniciansResult.error.message}`)
+    else setTechnicians(techniciansResult.data || [])
     setLoading(false)
+  }
+
+  async function updateAssignments(memberIds) {
+    if (!selected) return
+    setSavingAssignment(true)
+    const { error } = await supabase.rpc('assign_work_order_technicians', {
+      p_work_order_id: selected.id,
+      p_member_ids: memberIds
+    })
+    setSavingAssignment(false)
+    if (error) return alert(`No se pudo actualizar la asignación: ${error.message}`)
+    await loadOrders()
+    await loadOrderEvents(selected.id)
   }
 
   async function updateStatus(order, nextStatus) {
@@ -93,8 +121,9 @@ export default function WorkOrders({ workshop = null, branding = null, role }) {
       .single()
 
     if (error) return alert(`No se pudo cambiar el estado: ${error.message}`)
-    setOrders(current => current.map(item => item.id === data.id ? data : item))
-    setSelected(data)
+    const updatedOrder = { ...data, assignments: order.assignments || [] }
+    setOrders(current => current.map(item => item.id === data.id ? updatedOrder : item))
+    setSelected(updatedOrder)
     await loadOrderEvents(data.id)
   }
 
@@ -300,8 +329,9 @@ export default function WorkOrders({ workshop = null, branding = null, role }) {
       return
     }
 
-    setOrders(current => current.map(item => item.id === data.id ? data : item))
-    setSelected(data)
+    const updatedOrder = { ...data, assignments: selected.assignments || [] }
+    setOrders(current => current.map(item => item.id === data.id ? updatedOrder : item))
+    setSelected(updatedOrder)
   }
 
   function whatsappLink(phone) {
@@ -330,9 +360,10 @@ export default function WorkOrders({ workshop = null, branding = null, role }) {
       const matchesStatus = status === 'Todas' || order.status === status
       const text = [order.order_number, order.customer?.full_name, order.customer?.phone, order.motorcycle?.brand, order.motorcycle?.model, order.motorcycle?.plate]
         .filter(Boolean).join(' ').toLowerCase()
-      return matchesStatus && text.includes(term)
+      const isMine = order.assignments?.some(item => item.member?.user_id === userId)
+      return matchesStatus && (!mineOnly || isMine) && text.includes(term)
     })
-  }, [orders, search, status])
+  }, [orders, search, status, mineOnly, userId])
 
   const summary = useMemo(() => ({
     active: orders.filter(order => !['Entregada', 'Cancelada'].includes(order.status)).length,
@@ -369,6 +400,12 @@ export default function WorkOrders({ workshop = null, branding = null, role }) {
             <option>Todas</option>
             {statuses.map(item => <option key={item}>{item}</option>)}
           </select>
+          {role === 'mechanic' && (
+            <label className="mine-only-filter">
+              <input type="checkbox" checked={mineOnly} onChange={event => setMineOnly(event.target.checked)} />
+              Mis órdenes
+            </label>
+          )}
           <strong>{filteredOrders.length} órdenes</strong>
         </div>
 
@@ -379,6 +416,7 @@ export default function WorkOrders({ workshop = null, branding = null, role }) {
                 <div className="work-order-number"><strong>{order.order_number}</strong><small>{formatDate(order.received_at)}</small></div>
                 <div><UserRound size={17} /><span>{order.customer?.full_name || 'Cliente no disponible'}</span></div>
                 <div><Bike size={17} /><span>{order.motorcycle ? `${order.motorcycle.brand} ${order.motorcycle.model}` : 'Moto no disponible'}</span></div>
+                <div className="assigned-technicians"><Wrench size={17} /><span>{order.assignments?.length ? order.assignments.map(item => item.member?.display_name || item.member?.email).join(', ') : 'Sin técnico'}</span></div>
                 <span className={`status-badge ${statusClass(order.status)}`}>{order.status}</span>
               </button>
             ))}
@@ -427,6 +465,25 @@ export default function WorkOrders({ workshop = null, branding = null, role }) {
               <div><Bike size={19} /><span>Motocicleta</span><strong>{selected.motorcycle ? `${selected.motorcycle.brand} ${selected.motorcycle.model}` : '—'}</strong><small>{selected.motorcycle?.plate ? `Placa ${selected.motorcycle.plate}` : 'Sin placa'}</small></div>
               <div><CalendarDays size={19} /><span>Ingreso</span><strong>{formatDate(selected.received_at)}</strong><small>{selected.mileage ?? '—'} km · Combustible {selected.fuel_level || '—'}</small></div>
             </div>
+
+            <section className="detail-section assignment-section">
+              <h3><Wrench size={19} /> Técnicos asignados</h3>
+              {canAssign ? (
+                <>
+                  <select
+                    multiple
+                    value={(selected.assignments || []).map(item => item.member?.id).filter(Boolean)}
+                    disabled={savingAssignment}
+                    onChange={event => updateAssignments([...event.target.selectedOptions].map(option => option.value))}
+                  >
+                    {technicians.map(technician => <option key={technician.id} value={technician.id}>{technician.display_name || technician.email}</option>)}
+                  </select>
+                  <small>Mantén presionada Command para seleccionar varios técnicos.</small>
+                </>
+              ) : (
+                <p>{selected.assignments?.length ? selected.assignments.map(item => item.member?.display_name || item.member?.email).join(', ') : 'Sin técnico asignado.'}</p>
+              )}
+            </section>
 
             <label className="order-status-control">Estado actual
               <select value={selected.status} disabled={!canEdit || selected.status === 'Entregada'} onChange={event => updateStatus(selected, event.target.value)}>

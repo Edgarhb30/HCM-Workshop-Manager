@@ -194,7 +194,7 @@ export default function App() {
         workshop={membership.workshop}
       />
     ),
-    ordenes: <WorkOrders workshop={membership.workshop} branding={branding} role={membership.role} />,
+    ordenes: <WorkOrders workshop={membership.workshop} branding={branding} role={membership.role} userId={session.user.id} />,
     presupuestos: <Quotes workshop={membership.workshop} branding={branding} role={membership.role} />,
     facturas: <Invoices workshop={membership.workshop} branding={branding} role={membership.role} />,
     inventario: <Inventory role={membership.role} />,
