@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   UserRound,
   Bike,
+  CalendarDays,
   Search,
   ArrowRight,
   CheckCircle2,
@@ -72,7 +73,21 @@ const conditionChecks = [
   ['missing_parts', 'Tornillos o piezas faltantes']
 ]
 
-export default function Reception() {
+const cleanPhone = value => String(value || '').replace(/\D/g, '')
+
+const appointmentMotorcycle = appointment => ({
+  ...emptyMotorcycleForm,
+  brand: appointment?.brand || '',
+  model: appointment?.model || '',
+  motorcycle_year: appointment?.motorcycle_year || '',
+  plate: appointment?.plate || '',
+  notes: appointment?.customer_notes || ''
+})
+
+export default function Reception({
+  initialAppointment = null,
+  clearInitialAppointment = () => {}
+}) {
   const [customers, setCustomers] = useState([])
   const [motorcycles, setMotorcycles] = useState([])
 
@@ -101,10 +116,59 @@ export default function Reception() {
   const [savingMotorcycle, setSavingMotorcycle] = useState(false)
   const [savingOrder, setSavingOrder] = useState(false)
   const [createdOrder, setCreatedOrder] = useState(null)
+  const [appointmentLoaded, setAppointmentLoaded] = useState(false)
 
   useEffect(() => {
     loadData()
   }, [])
+
+  useEffect(() => {
+    if (!initialAppointment || loading || appointmentLoaded) return
+
+    setAppointmentLoaded(true)
+    const intake = [
+      initialAppointment.service,
+      initialAppointment.customer_notes
+    ].filter(Boolean).join(' — ')
+    const customer = customers.find(item =>
+      cleanPhone(item.phone) === cleanPhone(initialAppointment.phone)
+    )
+
+    setReceptionForm({
+      ...emptyReceptionForm,
+      intake_notes: intake
+    })
+
+    if (!customer) {
+      setCustomerForm({
+        full_name: initialAppointment.customer_name || '',
+        phone: initialAppointment.phone || '',
+        email: initialAppointment.email || '',
+        notes: 'Cliente creado desde una cita.'
+      })
+      setShowCustomerForm(true)
+      return
+    }
+
+    setSelectedCustomer(customer)
+    const motorcycle = motorcycles.find(item =>
+      item.customer_id === customer.id &&
+      item.brand?.toLowerCase() === initialAppointment.brand?.toLowerCase() &&
+      item.model?.toLowerCase() === initialAppointment.model?.toLowerCase()
+    )
+
+    if (motorcycle) {
+      setSelectedMotorcycle(motorcycle)
+      setReceptionForm(current => ({
+        ...current,
+        mileage: motorcycle.mileage ?? ''
+      }))
+      return
+    }
+
+    setMotorcycleForm(appointmentMotorcycle(initialAppointment))
+    setShowMotorcycleForm(true)
+  }, [initialAppointment, loading, appointmentLoaded, customers, motorcycles])
 
   async function loadData() {
     setLoading(true)
@@ -195,6 +259,7 @@ export default function Reception() {
   }
 
   function restart() {
+    clearInitialAppointment()
     setSelectedCustomer(null)
     setSelectedMotorcycle(null)
     setCustomerSearch('')
@@ -206,6 +271,7 @@ export default function Reception() {
     setCustomerForm(emptyCustomerForm)
     setReceptionForm(emptyReceptionForm)
     setCreatedOrder(null)
+    setAppointmentLoaded(false)
   }
 
   function updateMotorcycleForm(field, value) {
@@ -255,6 +321,11 @@ export default function Reception() {
     setCustomerForm(emptyCustomerForm)
     setShowCustomerForm(false)
     chooseCustomer(data)
+
+    if (initialAppointment) {
+      setMotorcycleForm(appointmentMotorcycle(initialAppointment))
+      setShowMotorcycleForm(true)
+    }
   }
 
   async function saveMotorcycle(event) {
@@ -364,6 +435,13 @@ export default function Reception() {
         .eq('id', selectedMotorcycle.id)
     }
 
+    if (initialAppointment?.id) {
+      await supabase
+        .from('appointments')
+        .update({ status: 'Completada' })
+        .eq('id', initialAppointment.id)
+    }
+
     setCreatedOrder(data)
     setSavingOrder(false)
   }
@@ -430,6 +508,20 @@ export default function Reception() {
           </button>
         )}
       </div>
+
+      {initialAppointment && (
+        <div className="appointment-reception-banner">
+          <CalendarDays size={21} />
+          <div>
+            <strong>Recepción iniciada desde la cita</strong>
+            <span>
+              {initialAppointment.appointment_date} ·{' '}
+              {String(initialAppointment.appointment_time).slice(0, 5)} ·{' '}
+              {initialAppointment.customer_name}
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className="reception-progress">
         <div className="reception-progress-step active">

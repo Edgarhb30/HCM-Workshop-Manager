@@ -31,6 +31,12 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState('dashboard')
   const [menu, setMenu] = useState(false)
+  const [receptionAppointment, setReceptionAppointment] = useState(null)
+
+  function receiveAppointment(appointment) {
+    setReceptionAppointment(appointment)
+    setPage('recepcion')
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -57,10 +63,15 @@ export default function App() {
 
   const pages = {
     dashboard: <Dashboard />,
-    agenda: <Agenda />,
+    agenda: <Agenda onReceive={receiveAppointment} />,
     clientes: <Customers />,
     motos: <Motorcycles />,
-    recepcion: <Reception />,
+    recepcion: (
+      <Reception
+        initialAppointment={receptionAppointment}
+        clearInitialAppointment={() => setReceptionAppointment(null)}
+      />
+    ),
     ordenes: <WorkOrders />
   }
 

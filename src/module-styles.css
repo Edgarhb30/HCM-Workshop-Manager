@@ -148,6 +148,18 @@
 .customer-order-history strong, .customer-order-history span { display: block; }
 .customer-order-history span, .customer-order-history p { color: #929ba4; }
 .customer-order-history p { margin: 5px 0 0; }
+.agenda-toolbar { display: grid; grid-template-columns: minmax(260px, 1fr) 190px auto; gap: 12px; align-items: center; margin-bottom: 18px; }
+.agenda-toolbar > strong { color: #9da6ae; font-size: .84rem; }
+.agenda-card { display: grid; grid-template-columns: 150px 1fr auto; align-items: center; }
+.appointment-date-box { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: center; border-right: 1px solid #30363c; padding-right: 16px; }
+.appointment-date-box svg { grid-row: 1 / 3; color: #f4b51c; }
+.appointment-date-box span { color: #9da6ae; }
+.appointment-main h3 { margin: 0 0 5px; }
+.agenda-actions { flex-wrap: wrap; justify-content: flex-end; }
+.appointment-reception-banner { display: flex; gap: 11px; align-items: center; background: #211d13; border: 1px solid #71591d; border-radius: 12px; padding: 13px; margin-bottom: 16px; }
+.appointment-reception-banner svg { color: #f4b51c; }
+.appointment-reception-banner strong, .appointment-reception-banner span { display: block; }
+.appointment-reception-banner span { color: #a9a18a; font-size: .82rem; margin-top: 3px; }
 
 @media (max-width: 760px) {
   .work-order-toolbar, .work-order-card, .reception-progress, .order-summary-grid { grid-template-columns: 1fr; }
@@ -161,4 +173,7 @@
   .maintenance-alert > a { grid-column: 1 / -1; width: 100%; }
   .customer-toolbar, .customer-contact-card, .customer-edit-form { grid-template-columns: 1fr; }
   .customer-edit-form .wide { grid-column: auto; }
+  .agenda-toolbar, .agenda-card { grid-template-columns: 1fr; }
+  .appointment-date-box { border-right: 0; border-bottom: 1px solid #30363c; padding: 0 0 12px; }
+  .agenda-actions { justify-content: flex-start; }
 }
