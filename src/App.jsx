@@ -10,6 +10,7 @@ import Agenda from './pages/Agenda'
 import Customers from './pages/Customers'
 import Motorcycles from './pages/Motorcycles'
 import Reception from './pages/Reception'
+import WorkOrders from './pages/WorkOrders'
 import ComingSoon from './pages/ComingSoon'
 
 const titles = {
@@ -59,7 +60,8 @@ export default function App() {
     agenda: <Agenda />,
     clientes: <Customers />,
     motos: <Motorcycles />,
-    recepcion: <Reception />
+    recepcion: <Reception />,
+    ordenes: <WorkOrders />
   }
 
   const content =

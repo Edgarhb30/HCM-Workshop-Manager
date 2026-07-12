@@ -6,9 +6,17 @@ import {
   ArrowRight,
   CheckCircle2,
   Plus,
-  X
+  X,
+  ClipboardCheck
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+
+const emptyCustomerForm = {
+  full_name: '',
+  phone: '',
+  email: '',
+  notes: ''
+}
 
 const emptyMotorcycleForm = {
   brand: '',
@@ -21,6 +29,49 @@ const emptyMotorcycleForm = {
   notes: ''
 }
 
+const emptyReceptionForm = {
+  mileage: '',
+  fuel_level: '1/2',
+  main_key: true,
+  spare_key: false,
+  documents: false,
+  other_items: '',
+  low_beam: 'Funciona',
+  high_beam: 'Funciona',
+  stop_light: 'Funciona',
+  left_turn_signal: 'Funciona',
+  right_turn_signal: 'Funciona',
+  horn: 'Funciona',
+  starts: 'Sí',
+  oil_leak: false,
+  fuel_leak: false,
+  coolant_leak: false,
+  body_damage: false,
+  scratches: false,
+  missing_parts: false,
+  inspection_notes: '',
+  intake_notes: '',
+  internal_notes: ''
+}
+
+const electricalChecks = [
+  ['low_beam', 'Luz baja'],
+  ['high_beam', 'Luz alta'],
+  ['stop_light', 'Luz de freno / stop'],
+  ['left_turn_signal', 'Direccional izquierda'],
+  ['right_turn_signal', 'Direccional derecha'],
+  ['horn', 'Bocina / pito']
+]
+
+const conditionChecks = [
+  ['oil_leak', 'Fuga de aceite'],
+  ['fuel_leak', 'Fuga de combustible'],
+  ['coolant_leak', 'Fuga de refrigerante'],
+  ['body_damage', 'Golpes o daños en tapas'],
+  ['scratches', 'Rayones visibles'],
+  ['missing_parts', 'Tornillos o piezas faltantes']
+]
+
 export default function Reception() {
   const [customers, setCustomers] = useState([])
   const [motorcycles, setMotorcycles] = useState([])
@@ -32,12 +83,24 @@ export default function Reception() {
   const [selectedMotorcycle, setSelectedMotorcycle] = useState(null)
 
   const [showMotorcycleForm, setShowMotorcycleForm] = useState(false)
+  const [showCustomerForm, setShowCustomerForm] = useState(false)
+  const [showReceptionForm, setShowReceptionForm] = useState(false)
+
+  const [customerForm, setCustomerForm] = useState(emptyCustomerForm)
+
   const [motorcycleForm, setMotorcycleForm] = useState(
     emptyMotorcycleForm
   )
 
+  const [receptionForm, setReceptionForm] = useState(
+    emptyReceptionForm
+  )
+
   const [loading, setLoading] = useState(true)
+  const [savingCustomer, setSavingCustomer] = useState(false)
   const [savingMotorcycle, setSavingMotorcycle] = useState(false)
+  const [savingOrder, setSavingOrder] = useState(false)
+  const [createdOrder, setCreatedOrder] = useState(null)
 
   useEffect(() => {
     loadData()
@@ -111,9 +174,24 @@ export default function Reception() {
   function chooseCustomer(customer) {
     setSelectedCustomer(customer)
     setSelectedMotorcycle(null)
-    setMotorcycleSearch('')
     setShowMotorcycleForm(false)
-    setMotorcycleForm(emptyMotorcycleForm)
+    setShowCustomerForm(false)
+    setShowReceptionForm(false)
+    setMotorcycleSearch('')
+    setCreatedOrder(null)
+  }
+
+  function chooseMotorcycle(motorcycle) {
+    setSelectedMotorcycle(motorcycle)
+
+    setReceptionForm({
+      ...emptyReceptionForm,
+      mileage:
+        motorcycle.mileage !== null &&
+        motorcycle.mileage !== undefined
+          ? String(motorcycle.mileage)
+          : ''
+    })
   }
 
   function restart() {
@@ -122,7 +200,12 @@ export default function Reception() {
     setCustomerSearch('')
     setMotorcycleSearch('')
     setShowMotorcycleForm(false)
+    setShowCustomerForm(false)
+    setShowReceptionForm(false)
     setMotorcycleForm(emptyMotorcycleForm)
+    setCustomerForm(emptyCustomerForm)
+    setReceptionForm(emptyReceptionForm)
+    setCreatedOrder(null)
   }
 
   function updateMotorcycleForm(field, value) {
@@ -130,6 +213,48 @@ export default function Reception() {
       ...current,
       [field]: value
     }))
+  }
+
+  function updateCustomerForm(field, value) {
+    setCustomerForm(current => ({
+      ...current,
+      [field]: value
+    }))
+  }
+
+  function updateReceptionForm(field, value) {
+    setReceptionForm(current => ({
+      ...current,
+      [field]: value
+    }))
+  }
+
+  async function saveCustomer(event) {
+    event.preventDefault()
+    setSavingCustomer(true)
+
+    const { data, error } = await supabase
+      .from('customers')
+      .insert({
+        full_name: customerForm.full_name.trim(),
+        phone: customerForm.phone.trim(),
+        email: customerForm.email.trim() || null,
+        notes: customerForm.notes.trim() || null
+      })
+      .select()
+      .single()
+
+    setSavingCustomer(false)
+
+    if (error) {
+      alert(`No se pudo guardar el cliente: ${error.message}`)
+      return
+    }
+
+    setCustomers(current => [...current, data])
+    setCustomerForm(emptyCustomerForm)
+    setShowCustomerForm(false)
+    chooseCustomer(data)
   }
 
   async function saveMotorcycle(event) {
@@ -169,9 +294,109 @@ export default function Reception() {
     }
 
     setMotorcycles(current => [...current, data])
-    setSelectedMotorcycle(data)
+    chooseMotorcycle(data)
     setShowMotorcycleForm(false)
     setMotorcycleForm(emptyMotorcycleForm)
+  }
+
+  async function createWorkOrder(event) {
+    event.preventDefault()
+
+    if (!selectedCustomer || !selectedMotorcycle) return
+
+    if (!receptionForm.intake_notes.trim()) {
+      alert('Escribe el motivo de ingreso de la motocicleta.')
+      return
+    }
+
+    setSavingOrder(true)
+
+    const inspection = [
+      receptionForm.documents && 'Documentos: Sí',
+      receptionForm.other_items.trim() &&
+        `Otros elementos: ${receptionForm.other_items.trim()}`,
+      ...electricalChecks.map(
+        ([field, label]) => `${label}: ${receptionForm[field]}`
+      ),
+      `La motocicleta enciende: ${receptionForm.starts}`,
+      ...conditionChecks.map(
+        ([field, label]) =>
+          `${label}: ${receptionForm[field] ? 'Sí' : 'No'}`
+      ),
+      receptionForm.inspection_notes.trim() &&
+        `Detalle de inspección: ${receptionForm.inspection_notes.trim()}`
+    ].filter(Boolean)
+
+    const orderData = {
+      customer_id: selectedCustomer.id,
+      motorcycle_id: selectedMotorcycle.id,
+      status: 'Recepción',
+      mileage: receptionForm.mileage
+        ? Number(receptionForm.mileage)
+        : null,
+      fuel_level: receptionForm.fuel_level,
+      main_key: receptionForm.main_key,
+      spare_key: receptionForm.spare_key,
+      accessories: inspection,
+      intake_notes: receptionForm.intake_notes.trim(),
+      internal_notes:
+        receptionForm.internal_notes.trim() || null
+    }
+
+    const { data, error } = await supabase
+      .from('work_orders')
+      .insert(orderData)
+      .select()
+      .single()
+
+    if (error) {
+      setSavingOrder(false)
+      alert(error.message)
+      return
+    }
+
+    if (receptionForm.mileage) {
+      await supabase
+        .from('motorcycles')
+        .update({
+          mileage: Number(receptionForm.mileage)
+        })
+        .eq('id', selectedMotorcycle.id)
+    }
+
+    setCreatedOrder(data)
+    setSavingOrder(false)
+  }
+
+  if (createdOrder) {
+    return (
+      <section className="panel">
+        <div className="reception-ready">
+          <CheckCircle2 size={48} />
+
+          <span className="eyebrow">
+            ORDEN CREADA CORRECTAMENTE
+          </span>
+
+          <h2>{createdOrder.order_number}</h2>
+
+          <p>
+            {selectedCustomer.full_name}
+            <br />
+            {selectedMotorcycle.brand}{' '}
+            {selectedMotorcycle.model}
+          </p>
+
+          <button
+            type="button"
+            className="primary"
+            onClick={restart}
+          >
+            Recibir otra motocicleta
+          </button>
+        </div>
+      </section>
+    )
   }
 
   return (
@@ -187,12 +412,11 @@ export default function Reception() {
               ? 'Selecciona el cliente'
               : !selectedMotorcycle
                 ? 'Selecciona la motocicleta'
-                : 'Preparar recepción'}
+                : 'Registrar ingreso'}
           </h2>
 
           <p>
-            Selecciona el cliente y la motocicleta para crear una
-            orden de trabajo.
+            Completa el ingreso para generar la Orden de Trabajo.
           </p>
         </div>
 
@@ -280,10 +504,70 @@ export default function Reception() {
             </div>
           )}
 
-          {!loading && !filteredCustomers.length && (
-            <div className="empty">
-              No encontramos clientes con esa búsqueda.
-            </div>
+          <button
+            type="button"
+            className="primary compact"
+            onClick={() =>
+              setShowCustomerForm(current => !current)
+            }
+          >
+            {showCustomerForm ? <X size={18} /> : <Plus size={18} />}
+            {showCustomerForm
+              ? 'Cerrar formulario'
+              : 'Cliente nuevo'}
+          </button>
+
+          {showCustomerForm && (
+            <form className="inline-form" onSubmit={saveCustomer}>
+              <label>
+                Nombre completo
+                <input
+                  required
+                  value={customerForm.full_name}
+                  onChange={event =>
+                    updateCustomerForm('full_name', event.target.value)
+                  }
+                />
+              </label>
+
+              <label>
+                Teléfono
+                <input
+                  required
+                  value={customerForm.phone}
+                  onChange={event =>
+                    updateCustomerForm('phone', event.target.value)
+                  }
+                />
+              </label>
+
+              <label>
+                Correo
+                <input
+                  type="email"
+                  value={customerForm.email}
+                  onChange={event =>
+                    updateCustomerForm('email', event.target.value)
+                  }
+                />
+              </label>
+
+              <label className="wide">
+                Notas
+                <textarea
+                  value={customerForm.notes}
+                  onChange={event =>
+                    updateCustomerForm('notes', event.target.value)
+                  }
+                />
+              </label>
+
+              <button className="primary" disabled={savingCustomer}>
+                {savingCustomer
+                  ? 'Guardando cliente...'
+                  : 'Guardar cliente y continuar'}
+              </button>
+            </form>
           )}
         </div>
       )}
@@ -330,9 +614,7 @@ export default function Reception() {
                 type="button"
                 className="selection-card"
                 key={motorcycle.id}
-                onClick={() =>
-                  setSelectedMotorcycle(motorcycle)
-                }
+                onClick={() => chooseMotorcycle(motorcycle)}
               >
                 <div>
                   <strong>
@@ -350,12 +632,6 @@ export default function Reception() {
               </button>
             ))}
           </div>
-
-          {!customerMotorcycles.length && (
-            <div className="empty">
-              Este cliente todavía no tiene motocicletas registradas.
-            </div>
-          )}
 
           <button
             type="button"
@@ -521,12 +797,10 @@ export default function Reception() {
 
             <div>
               <span>Motocicleta</span>
-
               <strong>
                 {selectedMotorcycle.brand}{' '}
                 {selectedMotorcycle.model}
               </strong>
-
               <small>
                 {selectedMotorcycle.plate
                   ? `Placa: ${selectedMotorcycle.plate}`
@@ -535,29 +809,239 @@ export default function Reception() {
             </div>
           </div>
 
-          <div className="reception-ready">
-            <Bike size={34} />
+          {!showReceptionForm ? (
+            <div className="reception-ready">
+              <ClipboardCheck size={38} />
 
-            <h3>Listos para continuar</h3>
+              <h3>Listos para registrar el ingreso</h3>
 
-            <p>
-              El siguiente paso registrará kilometraje, combustible,
-              llaves, accesorios y motivo de ingreso.
-            </p>
-
-            <button
-              type="button"
-              className="primary"
-              onClick={() =>
-                alert(
-                  'El formulario de ingreso será el siguiente paso.'
-                )
-              }
+              <button
+                type="button"
+                className="primary"
+                onClick={() => setShowReceptionForm(true)}
+              >
+                Continuar con la recepción
+                <ArrowRight size={18} />
+              </button>
+            </div>
+          ) : (
+            <form
+              className="inline-form"
+              onSubmit={createWorkOrder}
             >
-              Continuar con la recepción
-              <ArrowRight size={18} />
-            </button>
-          </div>
+              <label>
+                Kilometraje de entrada
+                <input
+                  type="number"
+                  min="0"
+                  value={receptionForm.mileage}
+                  onChange={event =>
+                    updateReceptionForm(
+                      'mileage',
+                      event.target.value
+                    )
+                  }
+                />
+              </label>
+
+              <label>
+                Nivel de combustible
+                <select
+                  value={receptionForm.fuel_level}
+                  onChange={event =>
+                    updateReceptionForm(
+                      'fuel_level',
+                      event.target.value
+                    )
+                  }
+                >
+                  <option>Vacío</option>
+                  <option>1/4</option>
+                  <option>1/2</option>
+                  <option>3/4</option>
+                  <option>Lleno</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Llaves entregadas</span>
+
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={receptionForm.main_key}
+                    onChange={event =>
+                      updateReceptionForm(
+                        'main_key',
+                        event.target.checked
+                      )
+                    }
+                  />
+                  Llave principal
+                </label>
+
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={receptionForm.spare_key}
+                    onChange={event =>
+                      updateReceptionForm(
+                        'spare_key',
+                        event.target.checked
+                      )
+                    }
+                  />
+                  Llave de repuesto
+                </label>
+              </label>
+
+              <div className="wide inspection-block">
+                <h3>Elementos entregados</h3>
+                <div className="inspection-grid compact-grid">
+                  <label className="check-card">
+                    <input
+                      type="checkbox"
+                      checked={receptionForm.documents}
+                      onChange={event =>
+                        updateReceptionForm(
+                          'documents',
+                          event.target.checked
+                        )
+                      }
+                    />
+                    Documentos
+                  </label>
+
+                  <label>
+                    Otros elementos
+                    <input
+                      placeholder="Ejemplo: control de alarma"
+                      value={receptionForm.other_items}
+                      onChange={event =>
+                        updateReceptionForm(
+                          'other_items',
+                          event.target.value
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div className="wide inspection-block">
+                <h3>Inspección eléctrica</h3>
+                <p className="muted">
+                  Comprueba las luces, direccionales y bocina al recibir la moto.
+                </p>
+
+                <div className="inspection-grid">
+                  {electricalChecks.map(([field, label]) => (
+                    <label key={field}>
+                      {label}
+                      <select
+                        value={receptionForm[field]}
+                        onChange={event =>
+                          updateReceptionForm(field, event.target.value)
+                        }
+                      >
+                        <option>Funciona</option>
+                        <option>No funciona</option>
+                        <option>No aplica</option>
+                      </select>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="wide inspection-block">
+                <h3>Funcionamiento y estado físico</h3>
+
+                <div className="inspection-grid">
+                  <label>
+                    ¿La motocicleta enciende?
+                    <select
+                      value={receptionForm.starts}
+                      onChange={event =>
+                        updateReceptionForm('starts', event.target.value)
+                      }
+                    >
+                      <option>Sí</option>
+                      <option>No</option>
+                      <option>No se pudo verificar</option>
+                    </select>
+                  </label>
+
+                  {conditionChecks.map(([field, label]) => (
+                    <label className="check-card" key={field}>
+                      <input
+                        type="checkbox"
+                        checked={receptionForm[field]}
+                        onChange={event =>
+                          updateReceptionForm(field, event.target.checked)
+                        }
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+
+                <label className="inspection-notes">
+                  Detalle de daños, fugas o piezas faltantes
+                  <textarea
+                    rows="3"
+                    placeholder="Indica la zona y el detalle observado."
+                    value={receptionForm.inspection_notes}
+                    onChange={event =>
+                      updateReceptionForm(
+                        'inspection_notes',
+                        event.target.value
+                      )
+                    }
+                  />
+                </label>
+              </div>
+
+              <label className="wide">
+                Motivo del ingreso
+                <textarea
+                  required
+                  rows="4"
+                  placeholder="Describe el trabajo solicitado o la falla reportada por el cliente."
+                  value={receptionForm.intake_notes}
+                  onChange={event =>
+                    updateReceptionForm(
+                      'intake_notes',
+                      event.target.value
+                    )
+                  }
+                />
+              </label>
+
+              <label className="wide">
+                Observaciones internas
+                <textarea
+                  rows="3"
+                  placeholder="Daños visibles, rayones, piezas faltantes u observaciones del taller."
+                  value={receptionForm.internal_notes}
+                  onChange={event =>
+                    updateReceptionForm(
+                      'internal_notes',
+                      event.target.value
+                    )
+                  }
+                />
+              </label>
+
+              <button
+                className="primary"
+                disabled={savingOrder}
+              >
+                {savingOrder
+                  ? 'Creando orden...'
+                  : 'Crear Orden de Trabajo'}
+              </button>
+            </form>
+          )}
         </div>
       )}
     </section>
