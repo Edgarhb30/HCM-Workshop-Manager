@@ -544,7 +544,7 @@ export default function WorkOrders({ workshop = null, branding = null, role, use
                 {orderEvents.map(item => (
                   <article key={item.id}>
                     <span className="timeline-dot" />
-                    <div><strong>{item.title}</strong><small>{formatDate(item.created_at)} · {item.event_type}</small>{item.description && <p>{item.description}</p>}</div>
+                    <div><strong>{item.title}</strong><small>{formatDate(item.created_at)} · {item.event_type} · {item.actor_name || 'Sistema HCM'}</small>{item.description && <p>{item.description}</p>}</div>
                     <span className="timeline-visibility" title={item.client_visible ? 'Visible para el cliente' : 'Solo taller'}>{item.client_visible ? <Eye size={16} /> : <EyeOff size={16} />}</span>
                   </article>
                 ))}
