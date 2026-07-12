@@ -15,6 +15,7 @@ import Quotes from './pages/Quotes'
 import Inventory from './pages/Inventory'
 import Invoices from './pages/Invoices'
 import Reports from './pages/Reports'
+import Settings from './pages/Settings'
 import ComingSoon from './pages/ComingSoon'
 
 const titles = {
@@ -138,7 +139,16 @@ export default function App() {
     presupuestos: <Quotes />,
     facturas: <Invoices />,
     inventario: <Inventory />,
-    reportes: <Reports />
+    reportes: <Reports />,
+    configuracion: (
+      <Settings
+        workshop={membership.workshop}
+        role={membership.role}
+        onWorkshopUpdated={workshop =>
+          setMembership(current => ({ ...current, workshop }))
+        }
+      />
+    )
   }
 
   const content =
