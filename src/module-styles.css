@@ -118,6 +118,36 @@
 .maintenance-clear strong, .maintenance-clear span { display: block; }
 .maintenance-clear span { color: #9ab5a7; font-size: .83rem; margin-top: 3px; }
 .dashboard-agenda-panel { margin-top: 0; }
+.customer-toolbar { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; margin-bottom: 16px; }
+.customer-count { color: #9da6ae; font-size: .84rem; }
+.customer-actions { display: flex; gap: 7px; }
+.icon-action { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid #394047; background: #22272c; color: #fff; border-radius: 9px; cursor: pointer; }
+.icon-action.whatsapp { background: #173d2d; color: #82e0af; border-color: #28513e; }
+.customer-detail { width: min(700px, 100%); }
+.edit-customer-button { margin-top: 12px; }
+.customer-edit-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: #111417; border: 1px solid #80631b; border-radius: 12px; padding: 15px; margin-top: 14px; }
+.customer-edit-form label { display: grid; gap: 7px; color: #bec5cb; font-size: .84rem; font-weight: 650; }
+.customer-edit-form .wide { grid-column: 1 / -1; }
+.customer-contact-card { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0 12px; }
+.customer-contact-card > div { display: grid; grid-template-columns: auto 1fr; gap: 3px 9px; background: #111417; border: 1px solid #30363c; border-radius: 11px; padding: 13px; }
+.customer-contact-card svg { grid-row: 1 / 3; color: #f4b51c; }
+.customer-contact-card span { color: #929ba4; font-size: .75rem; }
+.customer-motorcycles { display: grid; gap: 10px; }
+.customer-motorcycles > article { background: #111417; border: 1px solid #30363c; border-radius: 12px; padding: 14px; }
+.customer-motorcycle-heading { display: flex; justify-content: space-between; gap: 12px; }
+.customer-motorcycle-heading strong, .customer-motorcycle-heading span { display: block; }
+.customer-motorcycle-heading span { color: #929ba4; margin-top: 3px; }
+.customer-motorcycle-heading svg { color: #f4b51c; }
+.customer-oil-status { display: grid; grid-template-columns: auto 1fr; gap: 3px 8px; align-items: center; border-top: 1px solid #30363c; margin-top: 12px; padding-top: 11px; }
+.customer-oil-status svg { grid-row: 1 / 3; color: #f4b51c; }
+.customer-oil-status span { color: #929ba4; font-size: .8rem; }
+.customer-oil-status strong { font-size: .84rem; }
+.customer-order-history { display: grid; gap: 9px; }
+.customer-order-history article { display: grid; grid-template-columns: auto 1fr; gap: 10px; background: #111417; border: 1px solid #30363c; border-radius: 11px; padding: 13px; }
+.customer-order-history svg { color: #f4b51c; }
+.customer-order-history strong, .customer-order-history span { display: block; }
+.customer-order-history span, .customer-order-history p { color: #929ba4; }
+.customer-order-history p { margin: 5px 0 0; }
 
 @media (max-width: 760px) {
   .work-order-toolbar, .work-order-card, .reception-progress, .order-summary-grid { grid-template-columns: 1fr; }
@@ -129,4 +159,6 @@
   .record-title { align-items: flex-start; flex-direction: column; }
   .maintenance-alert { grid-template-columns: auto 1fr; }
   .maintenance-alert > a { grid-column: 1 / -1; width: 100%; }
+  .customer-toolbar, .customer-contact-card, .customer-edit-form { grid-template-columns: 1fr; }
+  .customer-edit-form .wide { grid-column: auto; }
 }
