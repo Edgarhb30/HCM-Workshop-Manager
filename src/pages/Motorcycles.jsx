@@ -8,6 +8,7 @@ import {
   Plus,
   Search,
   UserRound,
+  Wrench,
   X
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
@@ -40,6 +41,26 @@ const emptyOilChange = motorcycle => ({
   notes: ''
 })
 
+const serviceTypes = [
+  'Filtro de aceite', 'Filtro de aire', 'Ajuste de válvulas',
+  'Líquido de frenos', 'Pastillas de freno', 'Refrigerante',
+  'Bujías', 'Kit de arrastre', 'Llantas', 'Rodamientos',
+  'Suspensión', 'Batería', 'Inyección / carburación',
+  'Sistema eléctrico', 'Otro'
+]
+
+const emptyMaintenance = motorcycle => ({
+  service_type: '',
+  service_date: today(),
+  mileage: motorcycle?.mileage ?? '',
+  work_order_id: '',
+  details: '',
+  parts_used: '',
+  next_service_mileage: '',
+  next_service_date: '',
+  technician_name: ''
+})
+
 const formatDate = value =>
   value
     ? new Intl.DateTimeFormat('es-CR', { dateStyle: 'medium' }).format(
@@ -60,6 +81,10 @@ export default function Motorcycles() {
   const [showOilForm, setShowOilForm] = useState(false)
   const [loadingDetail, setLoadingDetail] = useState(false)
   const [savingOil, setSavingOil] = useState(false)
+  const [maintenanceRecords, setMaintenanceRecords] = useState([])
+  const [maintenanceForm, setMaintenanceForm] = useState(emptyMaintenance())
+  const [showMaintenanceForm, setShowMaintenanceForm] = useState(false)
+  const [savingMaintenance, setSavingMaintenance] = useState(false)
 
   useEffect(() => { load() }, [])
 
@@ -100,9 +125,10 @@ export default function Motorcycles() {
     setSelected(motorcycle)
     setShowOilForm(false)
     setOilForm(emptyOilChange(motorcycle))
+    setMaintenanceForm(emptyMaintenance(motorcycle))
     setLoadingDetail(true)
 
-    const [ordersResult, oilResult] = await Promise.all([
+    const [ordersResult, oilResult, maintenanceResult] = await Promise.all([
       supabase
         .from('work_orders')
         .select('id, order_number, status, received_at, mileage, intake_notes')
@@ -112,13 +138,20 @@ export default function Motorcycles() {
         .from('oil_changes')
         .select('*')
         .eq('motorcycle_id', motorcycle.id)
-        .order('change_date', { ascending: false })
+        .order('change_date', { ascending: false }),
+      supabase
+        .from('maintenance_records')
+        .select('*')
+        .eq('motorcycle_id', motorcycle.id)
+        .order('service_date', { ascending: false })
     ])
 
     if (ordersResult.error) alert(ordersResult.error.message)
     if (oilResult.error) alert(oilResult.error.message)
+    if (maintenanceResult.error) alert(maintenanceResult.error.message)
     setOrders(ordersResult.data || [])
     setOilChanges(oilResult.data || [])
+    setMaintenanceRecords(maintenanceResult.data || [])
     setLoadingDetail(false)
   }
 
@@ -171,6 +204,51 @@ export default function Motorcycles() {
     setSavingOil(false)
   }
 
+  async function saveMaintenance(event) {
+    event.preventDefault()
+    if (!selected) return
+    setSavingMaintenance(true)
+
+    const payload = {
+      motorcycle_id: selected.id,
+      work_order_id: maintenanceForm.work_order_id || null,
+      service_type: maintenanceForm.service_type,
+      service_date: maintenanceForm.service_date,
+      mileage: maintenanceForm.mileage ? Number(maintenanceForm.mileage) : null,
+      details: maintenanceForm.details.trim() || null,
+      parts_used: maintenanceForm.parts_used.trim() || null,
+      next_service_mileage: maintenanceForm.next_service_mileage
+        ? Number(maintenanceForm.next_service_mileage)
+        : null,
+      next_service_date: maintenanceForm.next_service_date || null,
+      technician_name: maintenanceForm.technician_name.trim() || null
+    }
+
+    const { data, error } = await supabase
+      .from('maintenance_records')
+      .insert(payload)
+      .select()
+      .single()
+
+    if (error) {
+      setSavingMaintenance(false)
+      alert(`No se pudo guardar el mantenimiento: ${error.message}`)
+      return
+    }
+
+    if (payload.mileage !== null && (!selected.mileage || payload.mileage >= selected.mileage)) {
+      await supabase.from('motorcycles').update({ mileage: payload.mileage }).eq('id', selected.id)
+      const updated = { ...selected, mileage: payload.mileage }
+      setSelected(updated)
+      setRows(current => current.map(item => item.id === updated.id ? updated : item))
+    }
+
+    setMaintenanceRecords(current => [data, ...current])
+    setMaintenanceForm(emptyMaintenance({ ...selected, mileage: payload.mileage ?? selected.mileage }))
+    setShowMaintenanceForm(false)
+    setSavingMaintenance(false)
+  }
+
   const filteredRows = useMemo(() => {
     const term = search.toLowerCase().trim()
     return rows.filter(motorcycle =>
@@ -185,6 +263,25 @@ export default function Motorcycles() {
   }, [rows, search])
 
   const lastOilChange = oilChanges[0]
+  const latestMaintenance = Array.from(
+    maintenanceRecords.reduce((items, record) => {
+      if (!items.has(record.service_type)) items.set(record.service_type, record)
+      return items
+    }, new Map()).values()
+  )
+
+  function maintenanceDue(record) {
+    const mileageDue = record.next_service_mileage && selected?.mileage >= record.next_service_mileage
+    const dateDue = record.next_service_date && record.next_service_date <= today()
+    if (mileageDue || dateDue) return 'Vencido'
+    if (record.next_service_mileage && selected?.mileage) {
+      const remaining = record.next_service_mileage - selected.mileage
+      if (remaining <= 500) return `Faltan ${remaining.toLocaleString('es-CR')} km`
+    }
+    if (record.next_service_date) return `Próximo ${formatDate(record.next_service_date)}`
+    if (record.next_service_mileage) return `Próximo ${record.next_service_mileage.toLocaleString('es-CR')} km`
+    return 'Sin próxima fecha'
+  }
 
   return (
     <>
@@ -305,6 +402,53 @@ export default function Motorcycles() {
                       ))}
                     </div>
                   )}
+                </section>
+
+                <section className="record-section maintenance-overview">
+                  <div className="record-title">
+                    <div><Wrench size={22} /><div><h3>Historial de mantenimiento</h3><p>Servicios, repuestos y próximos trabajos</p></div></div>
+                    <button className="primary compact" type="button" onClick={() => setShowMaintenanceForm(!showMaintenanceForm)}>
+                      <Plus size={17} />Registrar servicio
+                    </button>
+                  </div>
+
+                  {!!latestMaintenance.length && (
+                    <div className="maintenance-next-grid">
+                      {latestMaintenance.filter(item => item.next_service_date || item.next_service_mileage).map(item => (
+                        <article className={maintenanceDue(item) === 'Vencido' ? 'overdue' : ''} key={item.id}>
+                          <span>{item.service_type}</span>
+                          <strong>{maintenanceDue(item)}</strong>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+
+                  {showMaintenanceForm && (
+                    <form className="maintenance-form" onSubmit={saveMaintenance}>
+                      <label>Tipo de servicio<select required value={maintenanceForm.service_type} onChange={event => setMaintenanceForm({ ...maintenanceForm, service_type: event.target.value })}><option value="">Seleccionar…</option>{serviceTypes.map(item => <option key={item}>{item}</option>)}</select></label>
+                      <label>Fecha<input required type="date" value={maintenanceForm.service_date} onChange={event => setMaintenanceForm({ ...maintenanceForm, service_date: event.target.value })} /></label>
+                      <label>Kilometraje<input type="number" min="0" value={maintenanceForm.mileage} onChange={event => setMaintenanceForm({ ...maintenanceForm, mileage: event.target.value })} /></label>
+                      <label>Orden de trabajo<select value={maintenanceForm.work_order_id} onChange={event => setMaintenanceForm({ ...maintenanceForm, work_order_id: event.target.value })}><option value="">Sin vincular</option>{orders.map(order => <option value={order.id} key={order.id}>{order.order_number}</option>)}</select></label>
+                      <label>Técnico<input value={maintenanceForm.technician_name} onChange={event => setMaintenanceForm({ ...maintenanceForm, technician_name: event.target.value })} /></label>
+                      <label>Próximo servicio (km)<input type="number" min={maintenanceForm.mileage || 0} value={maintenanceForm.next_service_mileage} onChange={event => setMaintenanceForm({ ...maintenanceForm, next_service_mileage: event.target.value })} /></label>
+                      <label>Próximo servicio (fecha)<input type="date" value={maintenanceForm.next_service_date} onChange={event => setMaintenanceForm({ ...maintenanceForm, next_service_date: event.target.value })} /></label>
+                      <label className="wide">Trabajo realizado<textarea required rows="3" value={maintenanceForm.details} onChange={event => setMaintenanceForm({ ...maintenanceForm, details: event.target.value })} /></label>
+                      <label className="wide">Repuestos o materiales utilizados<textarea rows="2" value={maintenanceForm.parts_used} onChange={event => setMaintenanceForm({ ...maintenanceForm, parts_used: event.target.value })} /></label>
+                      <button className="primary" disabled={savingMaintenance}>{savingMaintenance ? 'Guardando…' : 'Guardar mantenimiento'}</button>
+                    </form>
+                  )}
+
+                  {maintenanceRecords.length ? (
+                    <div className="maintenance-history">
+                      {maintenanceRecords.map(record => (
+                        <article key={record.id}>
+                          <Wrench size={18} />
+                          <div><strong>{record.service_type}</strong><span>{formatDate(record.service_date)} · {record.mileage?.toLocaleString('es-CR') || '—'} km</span><p>{record.details || 'Sin detalle.'}</p>{record.parts_used && <small>Materiales: {record.parts_used}</small>}</div>
+                          <b className={maintenanceDue(record) === 'Vencido' ? 'overdue-text' : ''}>{maintenanceDue(record)}</b>
+                        </article>
+                      ))}
+                    </div>
+                  ) : <div className="empty compact-empty">Todavía no hay mantenimientos generales registrados.</div>}
                 </section>
 
                 <section className="record-section">
