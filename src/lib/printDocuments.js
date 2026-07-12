@@ -11,13 +11,14 @@ const dateTime = value => value
 
 const value = item => escapeHtml(item || 'No registrado')
 
-function openPrintDocument(title, body) {
-  const popup = window.open('', '_blank')
+function openPrintDocument(title, body, existingPopup = null) {
+  const popup = existingPopup || window.open('', '_blank')
   if (!popup) {
     alert('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes para HCM.')
     return
   }
 
+  popup.document.open()
   popup.document.write(`<!doctype html>
   <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>${escapeHtml(title)}</title>
@@ -131,7 +132,7 @@ export function printReceptionDocument({ order, photos = [], signatures = [], wo
   `)
 }
 
-export function printQuoteDocument({ quote, workshop = null, branding = null }) {
+export function printQuoteDocument({ quote, workshop = null, branding = null, popup = null }) {
   const rows = (quote.items || []).map(item => `
     <tr><td>${value(item.item_type)}</td><td>${value(item.description)}</td><td class="number">${escapeHtml(item.quantity)}</td><td class="number">${escapeHtml(money(item.unit_price))}</td><td class="number"><strong>${escapeHtml(money(item.line_total))}</strong></td></tr>
   `).join('')
@@ -146,10 +147,10 @@ export function printQuoteDocument({ quote, workshop = null, branding = null }) 
     ${quote.notes ? `<h2>Notas</h2><div class="notes">${value(quote.notes)}</div>` : ''}
     <div class="disclaimer">Presupuesto válido hasta ${shortDate(quote.valid_until)}. Cualquier trabajo adicional deberá ser autorizado por el cliente.</div>
     <footer>Documento generado por HCM Workshop Manager - ${escapeHtml(workshop?.name || 'Herrera Custom Motorcycle')}</footer>
-  `)
+  `, popup)
 }
 
-export function printInvoiceDocument({ invoice, workshop = null, branding = null }) {
+export function printInvoiceDocument({ invoice, workshop = null, branding = null, popup = null }) {
   const rows = (invoice.items || []).map(item => `
     <tr><td>${value(item.item_type)}</td><td>${value(item.description)}</td><td class="number">${escapeHtml(item.quantity)}</td><td class="number">${escapeHtml(money(item.unit_price))}</td><td class="number"><strong>${escapeHtml(money(item.line_total))}</strong></td></tr>
   `).join('')
@@ -168,7 +169,7 @@ export function printInvoiceDocument({ invoice, workshop = null, branding = null
     ${invoice.notes ? `<h2>Notas</h2><div class="notes">${value(invoice.notes)}</div>` : ''}
     <div class="disclaimer"><strong>Comprobante interno:</strong> este documento sirve para el control del taller y no sustituye el comprobante electrónico autorizado por el Ministerio de Hacienda.</div>
     <footer>Documento generado por HCM Workshop Manager - ${escapeHtml(workshop?.name || 'Herrera Custom Motorcycle')}</footer>
-  `)
+  `, popup)
 }
 
 export function printDeliveryDocument({ order, delivery, signatures = [], workshop = null, branding = null }) {

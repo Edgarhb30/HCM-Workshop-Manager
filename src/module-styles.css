@@ -419,6 +419,8 @@
 .themed-public.theme-light input, .themed-public.theme-light select, .themed-public.theme-light textarea { color: var(--brand-text); background: #fff; border-color: #bfc4c8; }
 .themed-public.theme-light .public-form h2, .themed-public.theme-light .public-footer, .themed-public.theme-light .portal-dashboard section > h2 { border-color: #d8dbde; }
 .themed-public.theme-light .portal-item, .themed-public.theme-light .portal-list article { color: var(--brand-text); background: #f7f8f8; border-color: #d8dbde; }
+.portal-document-button { display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 7px; padding: 9px; border: 1px solid currentColor; border-radius: 8px; color: var(--brand-primary, #222); background: transparent; cursor: pointer; font-weight: 750; }
+.portal-document-button:disabled { opacity: .55; cursor: wait; }
 .theme-light .stat-card svg, .theme-light .order-summary-grid svg, .theme-light .work-order-card svg,
 .theme-light .order-detail-grid svg, .theme-light .reception-section-heading svg,
 .theme-light .selected-summary svg, .theme-light .reception-ready svg, .theme-light .motorcycle-facts svg,

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Bike, CalendarDays, FileText, LogOut, Wrench } from 'lucide-react'
+import { Bike, CalendarDays, FileText, LogOut, Printer, Wrench } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { defaultBranding, themeVariables } from '../lib/theme'
+import { printInvoiceDocument, printQuoteDocument } from '../lib/printDocuments'
 
 const money = value => new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'CRC', maximumFractionDigits: 0 }).format(Number(value) || 0)
 const date = value => value ? new Intl.DateTimeFormat('es-CR', { dateStyle: 'medium' }).format(new Date(`${value.slice(0, 10)}T12:00:00`)) : '—'
@@ -18,6 +19,7 @@ export default function ClientPortal({ workshopSlug }) {
   const [message, setMessage] = useState('')
   const [linkSent, setLinkSent] = useState(false)
   const [publicConfig, setPublicConfig] = useState(defaultBranding)
+  const [loadingDocument, setLoadingDocument] = useState('')
   const shellProps = {
     className: `public-shell themed-public theme-${publicConfig.theme_mode || 'light'}`,
     style: themeVariables(publicConfig)
@@ -106,6 +108,33 @@ export default function ClientPortal({ workshopSlug }) {
     else loadPortal()
   }
 
+  async function openClientDocument(type, number) {
+    const popup = window.open('', '_blank')
+    if (!popup) {
+      alert('Permite ventanas emergentes para abrir el documento.')
+      return
+    }
+    popup.document.write('<p style="font-family:Arial;padding:24px">Preparando documento seguro…</p>')
+    popup.document.close()
+    setLoadingDocument(number)
+    const { data: result, error } = await supabase.rpc('get_client_document', {
+      p_workshop_slug: workshopSlug,
+      p_document_type: type,
+      p_document_number: number
+    })
+    setLoadingDocument('')
+    if (error || !result?.document) {
+      popup.close()
+      alert(error?.message || 'No fue posible abrir el documento.')
+      return
+    }
+    if (result.type === 'quote') {
+      printQuoteDocument({ quote: result.document, workshop: publicConfig, branding: publicConfig, popup })
+    } else {
+      printInvoiceDocument({ invoice: result.document, workshop: publicConfig, branding: publicConfig, popup })
+    }
+  }
+
   if (loading) return <main {...shellProps}><section className="public-card">Cargando tu expediente…</section></main>
 
   if (!session) return (
@@ -152,7 +181,11 @@ export default function ClientPortal({ workshopSlug }) {
       <section><h2><Wrench size={21} /> Órdenes de trabajo</h2><div className="portal-list">{data.work_orders.length ? data.work_orders.map(order => <article key={order.id}><div><strong>{order.order_number}</strong><span>{motorcycleName(order.motorcycle_id)} · {date(order.received_at)}</span><small>{order.reason}</small></div><b className="portal-status">{order.status}</b></article>) : <p className="empty">No hay órdenes registradas.</p>}</div></section>
       <section><h2>Cambios de aceite</h2><div className="portal-list">{data.oil_changes.length ? data.oil_changes.map(change => <article key={change.id}><div><strong>{motorcycleName(change.motorcycle_id)}</strong><span>{date(change.change_date)} · {change.mileage} km</span><small>{change.oil_brand || 'Aceite'} {change.oil_viscosity || ''}</small></div><b>Próximo: {change.next_change_mileage ? `${change.next_change_mileage} km` : date(change.next_change_date)}</b></article>) : <p className="empty">Sin cambios de aceite registrados.</p>}</div></section>
       <section><h2><Wrench size={21} /> Historial de mantenimiento</h2><div className="portal-list">{data.maintenance.length ? data.maintenance.map(item => <article key={item.id}><div><strong>{item.service_type} · {motorcycleName(item.motorcycle_id)}</strong><span>{date(item.service_date)} · {item.mileage ?? '—'} km</span><small>{item.details || 'Servicio registrado'}{item.parts_used ? ` · Materiales: ${item.parts_used}` : ''}</small></div><b>{item.next_service_mileage ? `Próximo: ${item.next_service_mileage} km` : item.next_service_date ? `Próximo: ${date(item.next_service_date)}` : 'Completado'}</b></article>) : <p className="empty">Sin mantenimientos generales registrados.</p>}</div></section>
-      <section><h2><FileText size={21} /> Documentos</h2><div className="portal-grid">{data.quotes.map(item => <article className="portal-item" key={item.quote_number}><strong>{item.quote_number}</strong><span>Presupuesto · {item.status}</span><b>{money(item.total)}</b></article>)}{data.invoices.map(item => <article className="portal-item" key={item.invoice_number}><strong>{item.invoice_number}</strong><span>Factura · {item.status}</span><b>{money(item.total)}</b></article>)}{!data.quotes.length && !data.invoices.length && <p className="empty">Sin documentos disponibles.</p>}</div></section>
+      <section><h2><FileText size={21} /> Documentos</h2><div className="portal-grid">
+        {data.quotes.map(item => <article className="portal-item" key={item.quote_number}><strong>{item.quote_number}</strong><span>Presupuesto · {item.status}</span><b>{money(item.total)}</b><button className="portal-document-button" disabled={loadingDocument === item.quote_number} onClick={() => openClientDocument('quote', item.quote_number)}><Printer size={16} />{loadingDocument === item.quote_number ? 'Abriendo…' : 'Abrir documento'}</button></article>)}
+        {data.invoices.map(item => <article className="portal-item" key={item.invoice_number}><strong>{item.invoice_number}</strong><span>Factura · {item.status}</span><b>{money(item.total)}</b><button className="portal-document-button" disabled={loadingDocument === item.invoice_number} onClick={() => openClientDocument('invoice', item.invoice_number)}><Printer size={16} />{loadingDocument === item.invoice_number ? 'Abriendo…' : 'Abrir documento'}</button></article>)}
+        {!data.quotes.length && !data.invoices.length && <p className="empty">Sin documentos disponibles.</p>}
+      </div></section>
     </section></main>
   )
 }
