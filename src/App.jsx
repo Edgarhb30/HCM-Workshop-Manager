@@ -17,6 +17,8 @@ import Invoices from './pages/Invoices'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 import ComingSoon from './pages/ComingSoon'
+import PublicBooking from './pages/PublicBooking'
+import ClientPortal from './pages/ClientPortal'
 
 const titles = {
   dashboard: 'Dashboard',
@@ -33,6 +35,7 @@ const titles = {
 }
 
 export default function App() {
+  const publicPath = window.location.pathname.replace(/\/$/, '') || '/'
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState('dashboard')
@@ -98,6 +101,14 @@ export default function App() {
 
     loadMembership()
   }, [session?.user?.id])
+
+  if (publicPath === '/reservar') {
+    return <PublicBooking workshopSlug="herrera-custom-motorcycle" />
+  }
+
+  if (publicPath === '/mi-moto') {
+    return <ClientPortal workshopSlug="herrera-custom-motorcycle" />
+  }
 
   if (loading) {
     return <div className="boot">Cargando HCM…</div>
