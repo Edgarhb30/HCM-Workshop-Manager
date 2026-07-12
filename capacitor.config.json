@@ -1,0 +1,9 @@
+{
+  "appId": "com.herreracustom.hcmworkshop",
+  "appName": "HCM Workshop Manager",
+  "webDir": "dist",
+  "backgroundColor": "#f1f2f3",
+  "android": {
+    "allowMixedContent": false
+  }
+}

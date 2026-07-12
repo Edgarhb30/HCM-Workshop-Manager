@@ -16,11 +16,15 @@ import {
   X
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { Capacitor } from '@capacitor/core'
 import SignaturePad from '../components/SignaturePad'
 import { printDeliveryDocument, printReceptionDocument } from '../lib/printDocuments'
 
 const statuses = ['Recepción', 'Diagnóstico', 'Esperando aprobación', 'Esperando repuestos', 'En reparación', 'Prueba', 'Lista para entregar', 'Entregada', 'Cancelada']
 const editableStatuses = statuses.filter(item => item !== 'Entregada')
+const publicAppUrl = Capacitor.isNativePlatform()
+  ? 'https://hcm-workshop-manager.vercel.app'
+  : window.location.origin
 
 const emptyDelivery = {
   receiver_name: '', receiver_identification: '', mileage_out: '',
@@ -383,12 +387,12 @@ export default function WorkOrders({ workshop = null, branding = null, role, use
     const messages = {
       'Recepción': `Hola ${name}. Recibimos su ${bike} y creamos la orden ${selected?.order_number}. Le mantendremos informado.`,
       'Diagnóstico': `Hola ${name}. Ya iniciamos el diagnóstico de su ${bike}, orden ${selected?.order_number}.`,
-      'Esperando aprobación': `Hola ${name}. La orden ${selected?.order_number} de su ${bike} está esperando su aprobación. Puede consultar el presupuesto en Mi moto: ${window.location.origin}/mi-moto`,
+      'Esperando aprobación': `Hola ${name}. La orden ${selected?.order_number} de su ${bike} está esperando su aprobación. Puede consultar el presupuesto en Mi moto: ${publicAppUrl}/mi-moto`,
       'Esperando repuestos': `Hola ${name}. La orden ${selected?.order_number} de su ${bike} está esperando repuestos. Le avisaremos cuando podamos continuar.`,
       'En reparación': `Hola ${name}. Los trabajos autorizados de su ${bike} ya están en proceso, orden ${selected?.order_number}.`,
       'Prueba': `Hola ${name}. Su ${bike} se encuentra en pruebas finales, orden ${selected?.order_number}.`,
-      'Lista para entregar': `Hola ${name}. Su ${bike} está lista para entregar. Puede consultar los documentos en Mi moto: ${window.location.origin}/mi-moto`,
-      'Entregada': `Hola ${name}. Gracias por confiar en ${workshop?.name || 'el taller'}. El historial de la orden ${selected?.order_number} quedó disponible en Mi moto: ${window.location.origin}/mi-moto`,
+      'Lista para entregar': `Hola ${name}. Su ${bike} está lista para entregar. Puede consultar los documentos en Mi moto: ${publicAppUrl}/mi-moto`,
+      'Entregada': `Hola ${name}. Gracias por confiar en ${workshop?.name || 'el taller'}. El historial de la orden ${selected?.order_number} quedó disponible en Mi moto: ${publicAppUrl}/mi-moto`,
       'Cancelada': `Hola ${name}. La orden ${selected?.order_number} de su ${bike} fue cancelada. Si tiene consultas, estamos para servirle.`
     }
     const message = encodeURIComponent(messages[selected?.status] || `Hola ${name}. Le escribimos de ${workshop?.name || 'el taller'} sobre la orden ${selected?.order_number} de su ${bike}.`)

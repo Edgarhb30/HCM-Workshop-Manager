@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">HCM Workshop Manager</string>
+    <string name="title_activity_main">HCM Workshop Manager</string>
+    <string name="package_name">com.herreracustom.hcmworkshop</string>
+    <string name="custom_url_scheme">com.herreracustom.hcmworkshop</string>
+</resources>
