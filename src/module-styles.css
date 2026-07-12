@@ -101,6 +101,23 @@
 .motorcycle-order-history span, .motorcycle-order-history p { color: #929ba4; }
 .motorcycle-order-history p { grid-column: 1 / -1; margin: 3px 0 0; }
 .compact-empty { padding: 20px; }
+.maintenance-panel { margin-bottom: 22px; }
+.maintenance-alert-list { display: grid; gap: 10px; }
+.maintenance-alert { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; background: #111417; border: 1px solid #30363c; border-radius: 12px; padding: 14px; }
+.maintenance-alert.overdue { border-color: #713237; background: #211518; }
+.maintenance-alert.upcoming { border-color: #71591d; background: #211d13; }
+.maintenance-alert-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 10px; background: #292f34; color: #f4b51c; }
+.maintenance-alert.overdue .maintenance-alert-icon { color: #ff8e95; background: #491f22; }
+.maintenance-alert span, .maintenance-alert strong, .maintenance-alert small { display: block; }
+.maintenance-alert span { color: #f4b51c; font-size: .69rem; font-weight: 900; letter-spacing: .08em; }
+.maintenance-alert.overdue span { color: #ff9aa0; }
+.maintenance-alert strong { margin: 3px 0; }
+.maintenance-alert small { color: #9da6ae; line-height: 1.45; }
+.maintenance-alert > a { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: #173d2d; color: #82e0af; }
+.maintenance-clear { display: flex; align-items: center; gap: 12px; background: #14231d; border: 1px solid #28513e; color: #82e0af; border-radius: 12px; padding: 16px; }
+.maintenance-clear strong, .maintenance-clear span { display: block; }
+.maintenance-clear span { color: #9ab5a7; font-size: .83rem; margin-top: 3px; }
+.dashboard-agenda-panel { margin-top: 0; }
 
 @media (max-width: 760px) {
   .work-order-toolbar, .work-order-card, .reception-progress, .order-summary-grid { grid-template-columns: 1fr; }
@@ -110,4 +127,6 @@
   .motorcycle-facts, .oil-summary, .oil-form { grid-template-columns: 1fr; }
   .oil-form .wide { grid-column: auto; }
   .record-title { align-items: flex-start; flex-direction: column; }
+  .maintenance-alert { grid-template-columns: auto 1fr; }
+  .maintenance-alert > a { grid-column: 1 / -1; width: 100%; }
 }
