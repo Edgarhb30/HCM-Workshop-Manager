@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import DataBackup from '../components/DataBackup'
+import FiscalSettings from '../components/FiscalSettings'
 
 const days = [
   ['monday', 'Lunes'],
@@ -313,6 +314,7 @@ export default function Settings({ workshop, role, onWorkshopUpdated, onBranding
           })}
         </div>
       </section>
+      <FiscalSettings workshop={workshop} role={role} />
       {canEdit && <DataBackup workshop={workshop} />}
     </form>
   )
