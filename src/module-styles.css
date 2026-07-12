@@ -200,6 +200,43 @@
 .access-denied { min-height: 100vh; display: grid; place-content: center; justify-items: start; padding: 30px; background: #101214; }
 .access-denied h1 { max-width: 620px; margin: 8px 0; }
 .access-denied p { color: #b5bdc4; max-width: 620px; }
+.invoice-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 11px; margin-bottom: 18px; }
+.invoice-summary article { display: grid; grid-template-columns: auto 1fr; gap: 3px 9px; background: #14181b; border: 1px solid #30363c; border-radius: 12px; padding: 13px; }
+.invoice-summary article.warning { background: #211d13; border-color: #71591d; }
+.invoice-summary svg { grid-row: 1 / 3; color: #f4b51c; }
+.invoice-summary span { color: #929ba4; font-size: .75rem; }
+.invoice-create-form { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end; background: #111417; border: 1px solid #30363c; border-radius: 12px; padding: 15px; margin-bottom: 17px; }
+.invoice-create-form label, .payment-form label { display: grid; gap: 7px; color: #bec5cb; font-size: .84rem; font-weight: 650; }
+.invoice-create-form p { grid-column: 1 / -1; margin: 0; }
+.invoice-search { margin-bottom: 16px; }
+.invoice-list { display: grid; gap: 9px; }
+.invoice-card { display: grid; grid-template-columns: auto 1fr auto 150px; gap: 12px; align-items: center; text-align: left; background: #14181b; color: #fff; border: 1px solid #30363c; border-radius: 12px; padding: 14px; cursor: pointer; }
+.invoice-card:hover { border-color: #80631b; }
+.invoice-card > svg { color: #f4b51c; }
+.invoice-card span, .invoice-card strong, .invoice-card small { display: block; }
+.invoice-card small, .invoice-card > div > span { color: #929ba4; }
+.invoice-status { width: max-content; border-radius: 999px; padding: 6px 9px; background: #483811; color: #ffd36a; font-size: .72rem; font-weight: 800; }
+.invoice-status.parcial { background: #183b53; color: #91cef7; }
+.invoice-status.pagada { background: #173d2d; color: #82e0af; }
+.invoice-status.anulada { background: #491f22; color: #ff9aa0; }
+.invoice-balance { text-align: right; }
+.invoice-detail { width: min(650px, 100%); }
+.invoice-detail-items { display: grid; gap: 8px; margin: 20px 0; }
+.invoice-detail-items > div { display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; border-bottom: 1px solid #30363c; padding: 10px 3px; }
+.invoice-detail-items span, .invoice-detail-items small { color: #929ba4; }
+.invoice-detail-items b { grid-column: 2; grid-row: 1 / 4; align-self: center; }
+.invoice-totals { display: grid; gap: 8px; background: #111417; border-radius: 11px; padding: 14px; }
+.invoice-totals > span { display: flex; justify-content: space-between; color: #aeb6bd; }
+.invoice-totals .grand-total { color: #f4b51c; border-top: 1px solid #30363c; padding-top: 9px; font-size: 1.12rem; }
+.payment-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: #111417; border: 1px solid #28513e; border-radius: 12px; padding: 15px; margin-top: 16px; }
+.payment-form h3, .payment-form .wide { grid-column: 1 / -1; }
+.payment-form h3 { margin: 0; }
+.payment-history { display: grid; gap: 8px; }
+.payment-history article { display: grid; grid-template-columns: auto 1fr; gap: 9px; border-bottom: 1px solid #30363c; padding: 10px 2px; }
+.payment-history svg { color: #82e0af; }
+.payment-history strong, .payment-history span, .payment-history small { display: block; }
+.payment-history span, .payment-history small { color: #929ba4; }
+.cancel-invoice { width: 100%; margin-top: 12px; border: 1px solid #713237; background: #211518; color: #ff9aa0; border-radius: 10px; padding: 11px; font-weight: 800; cursor: pointer; }
 .inventory-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 11px; margin-bottom: 18px; }
 .inventory-summary article { display: grid; grid-template-columns: auto 1fr; gap: 3px 9px; background: #14181b; border: 1px solid #30363c; border-radius: 12px; padding: 13px; }
 .inventory-summary article.warning { background: #211518; border-color: #713237; }
@@ -255,4 +292,7 @@
   .quote-card > strong { text-align: left; }
   .inventory-summary, .inventory-form, .inventory-toolbar, .inventory-card, .movement-form { grid-template-columns: 1fr; }
   .inventory-form .wide, .movement-form .wide, .movement-form h3 { grid-column: auto; }
+  .invoice-summary, .invoice-create-form, .invoice-card, .payment-form { grid-template-columns: 1fr; }
+  .invoice-create-form p, .payment-form h3, .payment-form .wide { grid-column: auto; }
+  .invoice-balance { text-align: left; }
 }

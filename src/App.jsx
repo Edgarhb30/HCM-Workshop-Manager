@@ -13,6 +13,7 @@ import Reception from './pages/Reception'
 import WorkOrders from './pages/WorkOrders'
 import Quotes from './pages/Quotes'
 import Inventory from './pages/Inventory'
+import Invoices from './pages/Invoices'
 import ComingSoon from './pages/ComingSoon'
 
 const titles = {
@@ -23,6 +24,7 @@ const titles = {
   recepcion: 'Recepción de motocicletas',
   ordenes: 'Órdenes de trabajo',
   presupuestos: 'Presupuestos',
+  facturas: 'Facturación',
   inventario: 'Inventario',
   reportes: 'Reportes',
   configuracion: 'Configuración'
@@ -133,6 +135,7 @@ export default function App() {
     ),
     ordenes: <WorkOrders />,
     presupuestos: <Quotes />,
+    facturas: <Invoices />,
     inventario: <Inventory />
   }
 

@@ -7,6 +7,7 @@ import {
   Users,
   Bike,
   FileText,
+  Receipt,
   BarChart3,
   X,
   Inbox
@@ -20,6 +21,7 @@ const items = [
   ['recepcion', 'Recepción', Inbox],
   ['ordenes', 'Órdenes de trabajo', ClipboardList],
   ['presupuestos', 'Presupuestos', FileText],
+  ['facturas', 'Facturación', Receipt],
   ['inventario', 'Inventario', Package],
   ['reportes', 'Reportes', BarChart3],
   ['configuracion', 'Configuración', Settings]
