@@ -9,6 +9,7 @@ export default function ClientPortal({ workshopSlug }) {
   const [session, setSession] = useState(null)
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
+  const [verificationCode, setVerificationCode] = useState('')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
@@ -36,7 +37,11 @@ export default function ClientPortal({ workshopSlug }) {
 
   async function loadPortal() {
     setLoading(true)
-    const { data: portalData, error } = await supabase.rpc('get_client_portal_data', { p_workshop_slug: workshopSlug })
+    const [portalResult, maintenanceResult] = await Promise.all([
+      supabase.rpc('get_client_portal_data', { p_workshop_slug: workshopSlug }),
+      supabase.rpc('get_client_maintenance', { p_workshop_slug: workshopSlug })
+    ])
+    const { data: portalData, error } = portalResult
     if (error || !portalData?.customer) {
       setData(null)
       setNeedsClaim(true)
@@ -48,7 +53,8 @@ export default function ClientPortal({ workshopSlug }) {
         oil_changes: portalData.oil_changes || [],
         quotes: portalData.quotes || [],
         invoices: portalData.invoices || [],
-        appointments: portalData.appointments || []
+        appointments: portalData.appointments || [],
+        maintenance: maintenanceResult.error ? [] : maintenanceResult.data || []
       })
       setNeedsClaim(false)
     }
@@ -57,10 +63,31 @@ export default function ClientPortal({ workshopSlug }) {
 
   async function sendLink(event) {
     event.preventDefault(); setSending(true); setMessage('')
-    const { error } = await supabase.auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: `${window.location.origin}/mi-moto`, shouldCreateUser: true } })
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: { shouldCreateUser: true }
+    })
     setSending(false)
     if (error) setMessage(error.message)
     else setLinkSent(true)
+  }
+
+  async function verifyCode(event) {
+    event.preventDefault()
+    setSending(true)
+    setMessage('')
+    const { data: result, error } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token: verificationCode.trim(),
+      type: 'email'
+    })
+    setSending(false)
+    if (error) {
+      setMessage('El código no es válido o ya venció. Solicita uno nuevo.')
+      return
+    }
+    setSession(result.session)
+    setLinkSent(false)
   }
 
   async function claim(event) {
@@ -76,8 +103,16 @@ export default function ClientPortal({ workshopSlug }) {
   if (!session) return (
     <main className="public-shell"><section className="public-card portal-login">
       <div className="public-logo">HCM</div><span className="eyebrow">PORTAL DEL CLIENTE</span><h1>Consulta tu motocicleta</h1>
-      <p>Te enviaremos un enlace seguro a tu correo. No necesitas contraseña.</p>
-      {linkSent ? <div className="portal-notice"><strong>Revisa tu correo</strong><span>Abre el enlace que enviamos a {email}.</span></div> : <form onSubmit={sendLink}><label>Correo registrado en el taller<input required type="email" value={email} onChange={e => setEmail(e.target.value)} /></label>{message && <div className="alert error">{message}</div>}<button className="primary" disabled={sending}>{sending ? 'Enviando…' : 'Enviar enlace de acceso'}</button></form>}
+      <p>Te enviaremos un código seguro a tu correo. No necesitas contraseña.</p>
+      {linkSent ? (
+        <form onSubmit={verifyCode}>
+          <div className="portal-notice"><strong>Revisa tu correo</strong><span>Escribe aquí el código enviado a {email}. No abras otro enlace.</span></div>
+          <label>Código de verificación<input required inputMode="numeric" autoComplete="one-time-code" maxLength="8" placeholder="Código recibido" value={verificationCode} onChange={e => setVerificationCode(e.target.value.replace(/\D/g, ''))} /></label>
+          {message && <div className="alert error">{message}</div>}
+          <button className="primary" disabled={sending}>{sending ? 'Verificando…' : 'Ingresar a Mi moto'}</button>
+          <button className="secondary" type="button" onClick={() => { setLinkSent(false); setVerificationCode(''); setMessage('') }}>Usar otro correo</button>
+        </form>
+      ) : <form onSubmit={sendLink}><label>Correo registrado en el taller<input required type="email" value={email} onChange={e => setEmail(e.target.value)} /></label>{message && <div className="alert error">{message}</div>}<button className="primary" disabled={sending}>{sending ? 'Enviando…' : 'Enviar código de acceso'}</button></form>}
       <a href="/reservar">¿Necesitas una cita? Reservar ahora</a>
     </section></main>
   )
@@ -108,6 +143,7 @@ export default function ClientPortal({ workshopSlug }) {
       <section><h2><Bike size={21} /> Mis motocicletas</h2><div className="portal-grid">{data.motorcycles.map(moto => <article className="portal-item" key={moto.id}><strong>{moto.brand} {moto.model}</strong><span>{moto.plate || 'Sin placa'} · {moto.mileage ?? '—'} km</span><small>{moto.year || 'Año no registrado'} {moto.color ? `· ${moto.color}` : ''}</small></article>)}</div></section>
       <section><h2><Wrench size={21} /> Órdenes de trabajo</h2><div className="portal-list">{data.work_orders.length ? data.work_orders.map(order => <article key={order.id}><div><strong>{order.order_number}</strong><span>{motorcycleName(order.motorcycle_id)} · {date(order.received_at)}</span><small>{order.reason}</small></div><b className="portal-status">{order.status}</b></article>) : <p className="empty">No hay órdenes registradas.</p>}</div></section>
       <section><h2>Cambios de aceite</h2><div className="portal-list">{data.oil_changes.length ? data.oil_changes.map(change => <article key={change.id}><div><strong>{motorcycleName(change.motorcycle_id)}</strong><span>{date(change.change_date)} · {change.mileage} km</span><small>{change.oil_brand || 'Aceite'} {change.oil_viscosity || ''}</small></div><b>Próximo: {change.next_change_mileage ? `${change.next_change_mileage} km` : date(change.next_change_date)}</b></article>) : <p className="empty">Sin cambios de aceite registrados.</p>}</div></section>
+      <section><h2><Wrench size={21} /> Historial de mantenimiento</h2><div className="portal-list">{data.maintenance.length ? data.maintenance.map(item => <article key={item.id}><div><strong>{item.service_type} · {motorcycleName(item.motorcycle_id)}</strong><span>{date(item.service_date)} · {item.mileage ?? '—'} km</span><small>{item.details || 'Servicio registrado'}{item.parts_used ? ` · Materiales: ${item.parts_used}` : ''}</small></div><b>{item.next_service_mileage ? `Próximo: ${item.next_service_mileage} km` : item.next_service_date ? `Próximo: ${date(item.next_service_date)}` : 'Completado'}</b></article>) : <p className="empty">Sin mantenimientos generales registrados.</p>}</div></section>
       <section><h2><FileText size={21} /> Documentos</h2><div className="portal-grid">{data.quotes.map(item => <article className="portal-item" key={item.quote_number}><strong>{item.quote_number}</strong><span>Presupuesto · {item.status}</span><b>{money(item.total)}</b></article>)}{data.invoices.map(item => <article className="portal-item" key={item.invoice_number}><strong>{item.invoice_number}</strong><span>Factura · {item.status}</span><b>{money(item.total)}</b></article>)}{!data.quotes.length && !data.invoices.length && <p className="empty">Sin documentos disponibles.</p>}</div></section>
     </section></main>
   )

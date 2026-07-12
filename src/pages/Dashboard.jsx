@@ -28,6 +28,7 @@ export default function Dashboard() {
   })
   const [recent, setRecent] = useState([])
   const [oilAlerts, setOilAlerts] = useState([])
+  const [maintenanceAlerts, setMaintenanceAlerts] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => { load() }, [])
@@ -35,7 +36,7 @@ export default function Dashboard() {
   async function load() {
     setLoading(true)
 
-    const [appointmentsResult, ordersResult, oilResult] = await Promise.all([
+    const [appointmentsResult, ordersResult, oilResult, maintenanceResult] = await Promise.all([
       supabase
         .from('appointments')
         .select('*')
@@ -57,12 +58,23 @@ export default function Dashboard() {
             customer:customers(full_name, phone)
           )
         `)
-        .order('change_date', { ascending: false })
+        .order('change_date', { ascending: false }),
+      supabase
+        .from('maintenance_records')
+        .select(`
+          *,
+          motorcycle:motorcycles(
+            id, brand, model, plate, mileage,
+            customer:customers(full_name, phone)
+          )
+        `)
+        .order('service_date', { ascending: false })
     ])
 
     if (appointmentsResult.error) alert(appointmentsResult.error.message)
     if (ordersResult.error) alert(ordersResult.error.message)
     if (oilResult.error) alert(oilResult.error.message)
+    if (maintenanceResult.error) alert(maintenanceResult.error.message)
 
     const appointments = appointmentsResult.data || []
     const orders = ordersResult.data || []
@@ -132,15 +144,32 @@ export default function Dashboard() {
       .sort((a, b) => (a.level === 'overdue' ? -1 : 1) - (b.level === 'overdue' ? -1 : 1))
 
     setOilAlerts(alerts)
+
+    const latestServices = new Map()
+    for (const record of maintenanceResult.data || []) {
+      const key = `${record.motorcycle_id}:${record.service_type}`
+      if (record.motorcycle && !latestServices.has(key)) latestServices.set(key, record)
+    }
+
+    setMaintenanceAlerts([...latestServices.values()].map(record => {
+      const mileageRemaining = record.next_service_mileage !== null && record.motorcycle?.mileage !== null
+        ? record.next_service_mileage - record.motorcycle.mileage
+        : null
+      const daysRemaining = record.next_service_date ? dateDiff(record.next_service_date) : null
+      const overdue = (mileageRemaining !== null && mileageRemaining <= 0) || (daysRemaining !== null && daysRemaining < 0)
+      const upcoming = (mileageRemaining !== null && mileageRemaining > 0 && mileageRemaining <= 500) || (daysRemaining !== null && daysRemaining >= 0 && daysRemaining <= 30)
+      if (!overdue && !upcoming) return null
+      return { ...record, level: overdue ? 'overdue' : 'upcoming', mileageRemaining, daysRemaining }
+    }).filter(Boolean))
     setLoading(false)
   }
 
-  function whatsappLink(alert) {
+  function whatsappLink(alert, service = 'cambio de aceite') {
     const phone = String(alert.motorcycle?.customer?.phone || '').replace(/\D/g, '')
     const fullPhone = phone.startsWith('506') ? phone : `506${phone}`
     const motorcycle = `${alert.motorcycle?.brand || ''} ${alert.motorcycle?.model || ''}`.trim()
     const message = encodeURIComponent(
-      `Hola ${alert.motorcycle?.customer?.full_name || ''}. Según el historial de su ${motorcycle}, ya se aproxima o corresponde realizar el cambio de aceite. Si gusta, podemos agendarle una cita. Saludos, Herrera Custom Motorcycle.`
+      `Hola ${alert.motorcycle?.customer?.full_name || ''}. Según el historial de su ${motorcycle}, ya se aproxima o corresponde realizar: ${service}. Si gusta, podemos agendarle una cita. Saludos, Herrera Custom Motorcycle.`
     )
     return `https://wa.me/${fullPhone}?text=${message}`
   }
@@ -192,15 +221,15 @@ export default function Dashboard() {
         <div className="panel-title">
           <div>
             <span className="eyebrow">MANTENIMIENTO PREVENTIVO</span>
-            <h2>Alertas de cambio de aceite</h2>
-            <p className="muted">Próximos en 500 km o 30 días, y mantenimientos vencidos.</p>
+            <h2>Alertas de mantenimiento</h2>
+            <p className="muted">Aceite y servicios generales próximos en 500 km o 30 días.</p>
           </div>
           <button className="secondary" type="button" onClick={load}>Actualizar</button>
         </div>
 
         {loading ? (
           <div className="empty">Revisando mantenimientos...</div>
-        ) : oilAlerts.length ? (
+        ) : oilAlerts.length || maintenanceAlerts.length ? (
           <div className="maintenance-alert-list">
             {oilAlerts.map(alert => (
               <article className={`maintenance-alert ${alert.level}`} key={alert.id}>
@@ -222,11 +251,22 @@ export default function Dashboard() {
                 )}
               </article>
             ))}
+            {maintenanceAlerts.map(alert => (
+              <article className={`maintenance-alert ${alert.level}`} key={alert.id}>
+                <div className="maintenance-alert-icon"><AlertTriangle size={22} /></div>
+                <div>
+                  <span>{alert.level === 'overdue' ? 'SERVICIO VENCIDO' : 'SERVICIO PRÓXIMO'}</span>
+                  <strong>{alert.service_type} · {alert.motorcycle.brand} {alert.motorcycle.model}</strong>
+                  <small>{alert.motorcycle.customer?.full_name || 'Sin propietario'} · {alert.motorcycle.plate || 'Sin placa'}<br />{alertDetail(alert)}</small>
+                </div>
+                {alert.motorcycle.customer?.phone && <a href={whatsappLink(alert, alert.service_type)} target="_blank" rel="noreferrer"><MessageCircle size={19} /></a>}
+              </article>
+            ))}
           </div>
         ) : (
           <div className="maintenance-clear">
             <CheckCircle2 size={30} />
-            <div><strong>Mantenimientos al día</strong><span>No hay cambios de aceite próximos o vencidos.</span></div>
+            <div><strong>Mantenimientos al día</strong><span>No hay servicios próximos o vencidos.</span></div>
           </div>
         )}
       </section>
