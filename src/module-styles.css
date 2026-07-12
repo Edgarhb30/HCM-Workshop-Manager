@@ -437,6 +437,18 @@
 .theme-light .timeline-form label, .theme-light .order-timeline small, .theme-light .order-timeline p, .theme-light .timeline-visibility { color: #626970; }
 .theme-light .order-timeline article:not(:last-child)::before { background: #cdd1d4; }
 .theme-light .timeline-dot { border-color: #fff; }
+.client-timeline { display: grid; }
+.client-timeline article { position: relative; display: grid; grid-template-columns: 18px 1fr auto; gap: 10px; padding-bottom: 18px; }
+.client-timeline article:not(:last-child)::before { content: ''; position: absolute; left: 8px; top: 15px; bottom: 0; width: 2px; background: #cdd1d4; }
+.client-timeline-dot { z-index: 1; width: 17px; height: 17px; margin-top: 2px; border: 3px solid var(--brand-surface, #fff); border-radius: 50%; background: var(--brand-accent, #666); }
+.client-timeline strong, .client-timeline span, .client-timeline small { display: block; }
+.client-timeline span, .client-timeline small { color: #626970; }
+.client-timeline small { margin-top: 4px; }
+.client-timeline b { align-self: start; padding: 5px 7px; border-radius: 999px; color: var(--brand-primary, #222); background: color-mix(in srgb, var(--brand-primary, #222), white 88%); font-size: .68rem; white-space: nowrap; }
+@media (max-width: 600px) {
+  .client-timeline article { grid-template-columns: 18px 1fr; }
+  .client-timeline b { grid-column: 2; justify-self: start; }
+}
 .theme-light .stat-card svg, .theme-light .order-summary-grid svg, .theme-light .work-order-card svg,
 .theme-light .order-detail-grid svg, .theme-light .reception-section-heading svg,
 .theme-light .selected-summary svg, .theme-light .reception-ready svg, .theme-light .motorcycle-facts svg,

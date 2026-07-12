@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Bike, CalendarDays, FileText, LogOut, Printer, Wrench } from 'lucide-react'
+import { Bike, CalendarDays, FileText, History, LogOut, Printer, Wrench } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { defaultBranding, themeVariables } from '../lib/theme'
 import { printInvoiceDocument, printQuoteDocument } from '../lib/printDocuments'
@@ -47,9 +47,10 @@ export default function ClientPortal({ workshopSlug }) {
 
   async function loadPortal() {
     setLoading(true)
-    const [portalResult, maintenanceResult] = await Promise.all([
+    const [portalResult, maintenanceResult, timelineResult] = await Promise.all([
       supabase.rpc('get_client_portal_data', { p_workshop_slug: workshopSlug }),
-      supabase.rpc('get_client_maintenance', { p_workshop_slug: workshopSlug })
+      supabase.rpc('get_client_maintenance', { p_workshop_slug: workshopSlug }),
+      supabase.rpc('get_client_timeline', { p_workshop_slug: workshopSlug })
     ])
     const { data: portalData, error } = portalResult
     if (error || !portalData?.customer) {
@@ -64,7 +65,8 @@ export default function ClientPortal({ workshopSlug }) {
         quotes: portalData.quotes || [],
         invoices: portalData.invoices || [],
         appointments: portalData.appointments || [],
-        maintenance: maintenanceResult.error ? [] : maintenanceResult.data || []
+        maintenance: maintenanceResult.error ? [] : maintenanceResult.data || [],
+        timeline: timelineResult.error ? [] : timelineResult.data || []
       })
       setNeedsClaim(false)
     }
@@ -179,6 +181,7 @@ export default function ClientPortal({ workshopSlug }) {
       <nav className="portal-actions"><a className="primary" href="/reservar"><CalendarDays size={18} /> Reservar cita</a></nav>
       <section><h2><Bike size={21} /> Mis motocicletas</h2><div className="portal-grid">{data.motorcycles.map(moto => <article className="portal-item" key={moto.id}><strong>{moto.brand} {moto.model}</strong><span>{moto.plate || 'Sin placa'} · {moto.mileage ?? '—'} km</span><small>{moto.year || 'Año no registrado'} {moto.color ? `· ${moto.color}` : ''}</small></article>)}</div></section>
       <section><h2><Wrench size={21} /> Órdenes de trabajo</h2><div className="portal-list">{data.work_orders.length ? data.work_orders.map(order => <article key={order.id}><div><strong>{order.order_number}</strong><span>{motorcycleName(order.motorcycle_id)} · {date(order.received_at)}</span><small>{order.reason}</small></div><b className="portal-status">{order.status}</b></article>) : <p className="empty">No hay órdenes registradas.</p>}</div></section>
+      <section><h2><History size={21} /> Progreso en el taller</h2><div className="client-timeline">{data.timeline.length ? data.timeline.map(item => <article key={item.id}><span className="client-timeline-dot" /><div><strong>{item.title}</strong><span>{item.order_number} · {motorcycleName(item.motorcycle_id)}</span><small>{date(item.created_at)} · {item.description || item.event_type}</small></div>{item.status && <b>{item.status}</b>}</article>) : <p className="empty">Todavía no hay actualizaciones visibles.</p>}</div></section>
       <section><h2>Cambios de aceite</h2><div className="portal-list">{data.oil_changes.length ? data.oil_changes.map(change => <article key={change.id}><div><strong>{motorcycleName(change.motorcycle_id)}</strong><span>{date(change.change_date)} · {change.mileage} km</span><small>{change.oil_brand || 'Aceite'} {change.oil_viscosity || ''}</small></div><b>Próximo: {change.next_change_mileage ? `${change.next_change_mileage} km` : date(change.next_change_date)}</b></article>) : <p className="empty">Sin cambios de aceite registrados.</p>}</div></section>
       <section><h2><Wrench size={21} /> Historial de mantenimiento</h2><div className="portal-list">{data.maintenance.length ? data.maintenance.map(item => <article key={item.id}><div><strong>{item.service_type} · {motorcycleName(item.motorcycle_id)}</strong><span>{date(item.service_date)} · {item.mileage ?? '—'} km</span><small>{item.details || 'Servicio registrado'}{item.parts_used ? ` · Materiales: ${item.parts_used}` : ''}</small></div><b>{item.next_service_mileage ? `Próximo: ${item.next_service_mileage} km` : item.next_service_date ? `Próximo: ${date(item.next_service_date)}` : 'Completado'}</b></article>) : <p className="empty">Sin mantenimientos generales registrados.</p>}</div></section>
       <section><h2><FileText size={21} /> Documentos</h2><div className="portal-grid">
