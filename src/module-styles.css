@@ -682,4 +682,6 @@
 .staff-appointment-form label { display: grid; gap: 6px; font-weight: 700; }
 .staff-appointment-form .wide { grid-column: 1 / -1; }
 @media (max-width: 800px) { .staff-appointment-form { grid-template-columns: 1fr; } .staff-appointment-form .wide { grid-column: auto; } }
+.backup-explanation { margin-bottom: 14px; color: color-mix(in srgb, var(--text-color, #222) 75%, transparent); }
+.backup-explanation p { margin: 5px 0; }
 @media (max-width: 700px) { .diagnostic-form { grid-template-columns: 1fr; } .diagnostic-form .wide { grid-column: auto; } }
