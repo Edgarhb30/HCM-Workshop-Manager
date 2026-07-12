@@ -237,6 +237,22 @@
 .payment-history strong, .payment-history span, .payment-history small { display: block; }
 .payment-history span, .payment-history small { color: #929ba4; }
 .cancel-invoice { width: 100%; margin-top: 12px; border: 1px solid #713237; background: #211518; color: #ff9aa0; border-radius: 10px; padding: 11px; font-weight: 800; cursor: pointer; }
+.report-filters { display: grid; grid-template-columns: 180px 180px auto; gap: 12px; align-items: end; background: #111417; border: 1px solid #30363c; border-radius: 12px; padding: 14px; margin-bottom: 17px; }
+.report-filters label { display: grid; gap: 6px; color: #bec5cb; font-size: .82rem; font-weight: 650; }
+.report-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 11px; margin-bottom: 17px; }
+.report-kpis article { display: grid; grid-template-columns: auto 1fr; gap: 3px 9px; background: #14181b; border: 1px solid #30363c; border-radius: 12px; padding: 14px; }
+.report-kpis article.warning { background: #211d13; border-color: #71591d; }
+.report-kpis svg { grid-row: 1 / 3; color: #f4b51c; }
+.report-kpis span { color: #929ba4; font-size: .75rem; }
+.report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+.report-card { background: #111417; border: 1px solid #30363c; border-radius: 12px; padding: 16px; }
+.report-card h3 { margin: 0 0 15px; }
+.report-bars { display: grid; gap: 12px; }
+.report-bars > div > div:first-child { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 5px; }
+.report-bars span { color: #aeb6bd; }
+.report-bar-track { height: 8px; background: #292f34; border-radius: 999px; overflow: hidden; }
+.report-bar-track span { display: block; height: 100%; background: #f4b51c; border-radius: inherit; }
+.report-table-card { margin-top: 13px; }
 .inventory-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 11px; margin-bottom: 18px; }
 .inventory-summary article { display: grid; grid-template-columns: auto 1fr; gap: 3px 9px; background: #14181b; border: 1px solid #30363c; border-radius: 12px; padding: 13px; }
 .inventory-summary article.warning { background: #211518; border-color: #713237; }
@@ -295,4 +311,5 @@
   .invoice-summary, .invoice-create-form, .invoice-card, .payment-form { grid-template-columns: 1fr; }
   .invoice-create-form p, .payment-form h3, .payment-form .wide { grid-column: auto; }
   .invoice-balance { text-align: left; }
+  .report-filters, .report-kpis, .report-grid { grid-template-columns: 1fr; }
 }

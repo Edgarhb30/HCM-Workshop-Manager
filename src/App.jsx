@@ -14,6 +14,7 @@ import WorkOrders from './pages/WorkOrders'
 import Quotes from './pages/Quotes'
 import Inventory from './pages/Inventory'
 import Invoices from './pages/Invoices'
+import Reports from './pages/Reports'
 import ComingSoon from './pages/ComingSoon'
 
 const titles = {
@@ -136,7 +137,8 @@ export default function App() {
     ordenes: <WorkOrders />,
     presupuestos: <Quotes />,
     facturas: <Invoices />,
-    inventario: <Inventory />
+    inventario: <Inventory />,
+    reportes: <Reports />
   }
 
   const content =
