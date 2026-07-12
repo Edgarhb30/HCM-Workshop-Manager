@@ -4,6 +4,9 @@ import {
   CalendarDays,
   CheckCircle2,
   ClipboardCheck,
+  Eye,
+  EyeOff,
+  History,
   MessageCircle,
   Printer,
   Save,
@@ -50,6 +53,9 @@ export default function WorkOrders({ workshop = null, branding = null }) {
   const [showDelivery, setShowDelivery] = useState(false)
   const [savingDelivery, setSavingDelivery] = useState(false)
   const [invoiceBalance, setInvoiceBalance] = useState(null)
+  const [orderEvents, setOrderEvents] = useState([])
+  const [eventForm, setEventForm] = useState({ title: '', description: '', client_visible: false })
+  const [savingEvent, setSavingEvent] = useState(false)
 
   useEffect(() => { loadOrders() }, [])
 
@@ -87,6 +93,17 @@ export default function WorkOrders({ workshop = null, branding = null }) {
     if (error) return alert(`No se pudo cambiar el estado: ${error.message}`)
     setOrders(current => current.map(item => item.id === data.id ? data : item))
     setSelected(data)
+    await loadOrderEvents(data.id)
+  }
+
+  async function loadOrderEvents(orderId) {
+    const { data, error } = await supabase
+      .from('work_order_events')
+      .select('*')
+      .eq('work_order_id', orderId)
+      .order('created_at', { ascending: false })
+    if (error) alert(`No se pudo cargar la línea de tiempo: ${error.message}`)
+    else setOrderEvents(data || [])
   }
 
   async function openOrder(order) {
@@ -98,8 +115,10 @@ export default function WorkOrders({ workshop = null, branding = null }) {
     setDelivery(null)
     setShowDelivery(false)
     setDeliverySignature('')
+    setOrderEvents([])
+    setEventForm({ title: '', description: '', client_visible: false })
 
-    const [photosResult, signaturesResult, deliveryResult, invoicesResult] = await Promise.all([
+    const [photosResult, signaturesResult, deliveryResult, invoicesResult, eventsResult] = await Promise.all([
       supabase
         .from('work_order_photos')
         .select('*')
@@ -119,13 +138,19 @@ export default function WorkOrders({ workshop = null, branding = null }) {
         .from('invoices')
         .select('total, amount_paid, status')
         .eq('work_order_id', order.id)
-        .neq('status', 'Anulada')
+        .neq('status', 'Anulada'),
+      supabase
+        .from('work_order_events')
+        .select('*')
+        .eq('work_order_id', order.id)
+        .order('created_at', { ascending: false })
     ])
 
     if (photosResult.error) alert(photosResult.error.message)
     if (signaturesResult.error) alert(signaturesResult.error.message)
     if (deliveryResult.error) alert(deliveryResult.error.message)
     if (invoicesResult.error) alert(invoicesResult.error.message)
+    if (eventsResult.error) alert(eventsResult.error.message)
 
     const signRows = async rows => Promise.all(
       (rows || []).map(async row => {
@@ -147,7 +172,30 @@ export default function WorkOrders({ workshop = null, branding = null }) {
       hasInvoice: !!invoicesResult.data?.length,
       amount: balance
     })
+    setOrderEvents(eventsResult.data || [])
     setLoadingMedia(false)
+  }
+
+  async function addTimelineEvent(event) {
+    event.preventDefault()
+    if (!selected || !eventForm.title.trim()) return
+    setSavingEvent(true)
+    const { error } = await supabase.from('work_order_events').insert({
+      workshop_id: selected.workshop_id,
+      work_order_id: selected.id,
+      event_type: 'Nota',
+      title: eventForm.title.trim(),
+      description: eventForm.description.trim() || null,
+      status: selected.status,
+      client_visible: eventForm.client_visible
+    })
+    setSavingEvent(false)
+    if (error) {
+      alert(`No se pudo guardar el evento: ${error.message}`)
+      return
+    }
+    setEventForm({ title: '', description: '', client_visible: false })
+    loadOrderEvents(selected.id)
   }
 
   function prepareDelivery(order = selected) {
@@ -257,9 +305,20 @@ export default function WorkOrders({ workshop = null, branding = null }) {
   function whatsappLink(phone) {
     const cleanPhone = String(phone || '').replace(/\D/g, '')
     const fullPhone = cleanPhone.startsWith('506') ? cleanPhone : `506${cleanPhone}`
-    const message = encodeURIComponent(
-      `Hola ${selected?.customer?.full_name || ''}. Le escribimos de Herrera Custom Motorcycle sobre la orden ${selected?.order_number || ''} de su ${selected?.motorcycle?.brand || ''} ${selected?.motorcycle?.model || ''}.`
-    )
+    const name = selected?.customer?.full_name || ''
+    const bike = `${selected?.motorcycle?.brand || ''} ${selected?.motorcycle?.model || ''}`.trim()
+    const messages = {
+      'Recepción': `Hola ${name}. Recibimos su ${bike} y creamos la orden ${selected?.order_number}. Le mantendremos informado.`,
+      'Diagnóstico': `Hola ${name}. Ya iniciamos el diagnóstico de su ${bike}, orden ${selected?.order_number}.`,
+      'Esperando aprobación': `Hola ${name}. La orden ${selected?.order_number} de su ${bike} está esperando su aprobación. Puede consultar el presupuesto en Mi moto: https://hcm-workshop-manager.vercel.app/mi-moto`,
+      'Esperando repuestos': `Hola ${name}. La orden ${selected?.order_number} de su ${bike} está esperando repuestos. Le avisaremos cuando podamos continuar.`,
+      'En reparación': `Hola ${name}. Los trabajos autorizados de su ${bike} ya están en proceso, orden ${selected?.order_number}.`,
+      'Prueba': `Hola ${name}. Su ${bike} se encuentra en pruebas finales, orden ${selected?.order_number}.`,
+      'Lista para entregar': `Hola ${name}. Su ${bike} está lista para entregar. Puede consultar los documentos en Mi moto: https://hcm-workshop-manager.vercel.app/mi-moto`,
+      'Entregada': `Hola ${name}. Gracias por confiar en Herrera Custom Motorcycle. El historial de la orden ${selected?.order_number} quedó disponible en Mi moto: https://hcm-workshop-manager.vercel.app/mi-moto`,
+      'Cancelada': `Hola ${name}. La orden ${selected?.order_number} de su ${bike} fue cancelada. Si tiene consultas, estamos para servirle.`
+    }
+    const message = encodeURIComponent(messages[selected?.status] || `Hola ${name}. Le escribimos de Herrera Custom Motorcycle sobre la orden ${selected?.order_number} de su ${bike}.`)
     return `https://wa.me/${fullPhone}?text=${message}`
   }
 
@@ -411,6 +470,26 @@ export default function WorkOrders({ workshop = null, branding = null }) {
                 <Save size={18} />
                 {savingNotes ? 'Guardando...' : 'Guardar notas'}
               </button>
+            </section>
+
+            <section className="detail-section order-timeline-section">
+              <h3><History size={19} /> Línea de tiempo</h3>
+              <form className="timeline-form" onSubmit={addTimelineEvent}>
+                <input required placeholder="Título del evento" value={eventForm.title} onChange={event => setEventForm({ ...eventForm, title: event.target.value })} />
+                <textarea rows="2" placeholder="Detalle u observación" value={eventForm.description} onChange={event => setEventForm({ ...eventForm, description: event.target.value })} />
+                <label><input type="checkbox" checked={eventForm.client_visible} onChange={event => setEventForm({ ...eventForm, client_visible: event.target.checked })} />Visible para el cliente</label>
+                <button className="secondary" disabled={savingEvent}>{savingEvent ? 'Guardando…' : 'Agregar evento'}</button>
+              </form>
+              <div className="order-timeline">
+                {orderEvents.map(item => (
+                  <article key={item.id}>
+                    <span className="timeline-dot" />
+                    <div><strong>{item.title}</strong><small>{formatDate(item.created_at)} · {item.event_type}</small>{item.description && <p>{item.description}</p>}</div>
+                    <span className="timeline-visibility" title={item.client_visible ? 'Visible para el cliente' : 'Solo taller'}>{item.client_visible ? <Eye size={16} /> : <EyeOff size={16} />}</span>
+                  </article>
+                ))}
+                {!orderEvents.length && <p className="empty compact-empty">Todavía no hay eventos registrados.</p>}
+              </div>
             </section>
             <section className="detail-section">
               <h3>Inspección de ingreso</h3>
