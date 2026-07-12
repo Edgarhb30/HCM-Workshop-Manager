@@ -19,6 +19,7 @@ import Settings from './pages/Settings'
 import ComingSoon from './pages/ComingSoon'
 import PublicBooking from './pages/PublicBooking'
 import ClientPortal from './pages/ClientPortal'
+import Team from './pages/Team'
 import { defaultBranding, themeVariables } from './lib/theme'
 
 const titles = {
@@ -33,10 +34,12 @@ const titles = {
   inventario: 'Inventario',
   reportes: 'Reportes',
   configuracion: 'Configuración'
+  ,equipo: 'Equipo y permisos'
 }
 
 export default function App() {
   const publicPath = window.location.pathname.replace(/\/$/, '') || '/'
+  const invitationMode = new URLSearchParams(window.location.search).get('invite') === '1'
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState('dashboard')
@@ -78,7 +81,7 @@ export default function App() {
       setMembershipLoading(true)
       setMembershipError('')
 
-      const { data, error } = await supabase
+      const membershipQuery = () => supabase
         .from('workshop_members')
         .select(`
           role,
@@ -89,6 +92,13 @@ export default function App() {
         .eq('active', true)
         .limit(1)
         .maybeSingle()
+
+      let { data, error } = await membershipQuery()
+
+      if (!error && !data) {
+        const { data: accepted } = await supabase.rpc('accept_my_workshop_invitation')
+        if (accepted) ({ data, error } = await membershipQuery())
+      }
 
       if (error) {
         setMembershipError(error.message)
@@ -124,6 +134,23 @@ export default function App() {
 
   if (loading) {
     return <div className="boot">Cargando HCM…</div>
+  }
+
+  if (invitationMode && session) {
+    return (
+      <main className="login-screen">
+        <section className="login-card invitation-session-warning">
+          <div className="login-logo">HCM</div>
+          <span className="eyebrow">ACTIVACIÓN DE EQUIPO</span>
+          <h1>Ya hay una cuenta abierta</h1>
+          <p>Actualmente está iniciada la sesión de <strong>{session.user.email}</strong>.</p>
+          <p>Cierra esa sesión para activar la invitación con el correo nuevo.</p>
+          <button className="primary" type="button" onClick={() => supabase.auth.signOut()}>
+            Cerrar sesión y continuar
+          </button>
+        </section>
+      </main>
+    )
   }
 
   if (!session) {
@@ -164,6 +191,7 @@ export default function App() {
     facturas: <Invoices workshop={membership.workshop} branding={branding} />,
     inventario: <Inventory />,
     reportes: <Reports />,
+    equipo: <Team workshop={membership.workshop} currentRole={membership.role} />,
     configuracion: (
       <Settings
         workshop={membership.workshop}
@@ -188,6 +216,7 @@ export default function App() {
         close={() => setMenu(false)}
         workshop={membership.workshop}
         branding={branding}
+        role={membership.role}
       />
 
       {menu && (

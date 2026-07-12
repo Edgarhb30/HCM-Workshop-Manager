@@ -5,6 +5,7 @@ import {
   Package,
   Settings,
   Users,
+  UsersRound,
   Bike,
   FileText,
   Receipt,
@@ -24,6 +25,7 @@ const items = [
   ['facturas', 'Facturación', Receipt],
   ['inventario', 'Inventario', Package],
   ['reportes', 'Reportes', BarChart3],
+  ['equipo', 'Equipo', UsersRound],
   ['configuracion', 'Configuración', Settings]
 ]
 
@@ -33,7 +35,8 @@ export default function Sidebar({
   open,
   close,
   workshop,
-  branding
+  branding,
+  role
 }) {
   return (
     <aside className={`sidebar ${open ? 'open' : ''}`}>
@@ -57,7 +60,7 @@ export default function Sidebar({
       </div>
 
       <nav>
-        {items.map(([id, label, Icon]) => (
+        {items.filter(([id]) => id !== 'equipo' || ['owner', 'admin'].includes(role)).map(([id, label, Icon]) => (
           <button
             key={id}
             className={page === id ? 'active' : ''}
