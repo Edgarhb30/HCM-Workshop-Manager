@@ -48,6 +48,15 @@ function openPrintDocument(title, body) {
     .signature { width: 100%; max-width: 330px; margin-top: 8px; text-align: center; break-inside: avoid; }
     .signature img { width: 100%; height: 115px; object-fit: contain; border-bottom: 1px solid #333; }
     .signature span { display: block; margin-top: 5px; }
+    .items-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    .items-table th, .items-table td { padding: 8px 6px; border-bottom: 1px solid #ccc; text-align: left; vertical-align: top; }
+    .items-table th { background: #f2f2f2; color: #555; font-size: 8.5pt; text-transform: uppercase; }
+    .items-table .number { text-align: right; white-space: nowrap; }
+    .totals { width: min(330px, 100%); margin: 14px 0 0 auto; display: grid; gap: 5px; }
+    .totals div { display: flex; justify-content: space-between; gap: 20px; padding: 4px 0; }
+    .totals .grand { margin-top: 4px; padding-top: 8px; border-top: 2px solid #333; font-size: 12pt; }
+    .document-status { display: inline-block; margin-top: 5px; padding: 4px 8px; border: 1px solid #999; border-radius: 999px; font-size: 8.5pt; font-weight: 700; }
+    .disclaimer { margin-top: 14px; padding: 9px; background: #f5f5f5; border-left: 4px solid #555; font-size: 8.5pt; }
     footer { margin-top: 24px; padding-top: 10px; border-top: 1px solid #bbb; color: #666; font-size: 8.5pt; text-align: center; }
     .screen-actions { position: fixed; right: 18px; top: 18px; display: flex; gap: 8px; }
     .screen-actions button { border: 0; border-radius: 8px; padding: 10px 14px; cursor: pointer; font-weight: 700; }
@@ -58,6 +67,26 @@ function openPrintDocument(title, body) {
   <div class="screen-actions"><button onclick="window.print()" class="print">Imprimir / Guardar PDF</button><button onclick="window.close()">Cerrar</button></div>
   ${body}</body></html>`)
   popup.document.close()
+}
+
+const money = value => new Intl.NumberFormat('es-CR', {
+  style: 'currency', currency: 'CRC', maximumFractionDigits: 0
+}).format(Number(value || 0))
+
+const shortDate = item => item
+  ? new Intl.DateTimeFormat('es-CR', { dateStyle: 'long' }).format(new Date(`${String(item).slice(0, 10)}T12:00:00`))
+  : 'No registrada'
+
+function brandedHeader({ title, number, date, workshop, branding }) {
+  const workshopName = workshop?.name || 'Herrera Custom Motorcycle'
+  const printColor = branding?.primary_color || '#222222'
+  const logoMarkup = branding?.logo_url
+    ? `<img src="${escapeHtml(branding.logo_url)}" alt="Logo" style="width:52px;height:52px;object-fit:contain">`
+    : 'HCM'
+  const contact = [branding?.phone, branding?.email, branding?.address].filter(Boolean).map(escapeHtml).join(' · ')
+  return `
+    <style>.logo{background:${escapeHtml(printColor)};color:#fff} header{border-bottom-color:${escapeHtml(printColor)}} .print{background:${escapeHtml(printColor)};color:#fff}</style>
+    <header><div class="brand"><div class="logo">${logoMarkup}</div><div><h1>${escapeHtml(workshopName)}</h1><span class="muted">${escapeHtml(title)}</span>${contact ? `<br><small>${contact}</small>` : ''}</div></div><div class="document-number"><small>${escapeHtml(title.toUpperCase())}</small><strong>${value(number)}</strong><span>${escapeHtml(date)}</span></div></header>`
 }
 
 export function printReceptionDocument({ order, photos = [], signatures = [], workshop = null, branding = null }) {
@@ -99,5 +128,45 @@ export function printReceptionDocument({ order, photos = [], signatures = [], wo
     <h2>Conformidad de recepción</h2>
     ${receptionSignature?.signedUrl ? `<div class="signature"><img src="${escapeHtml(receptionSignature.signedUrl)}" alt="Firma del cliente"><span>${value(receptionSignature.signer_name || order.customer?.full_name)}</span><small>Firma del cliente</small></div>` : '<p class="muted">Sin firma registrada.</p>'}
     <footer>Documento generado por HCM Workshop Manager - ${escapeHtml(workshopName)}</footer>
+  `)
+}
+
+export function printQuoteDocument({ quote, workshop = null, branding = null }) {
+  const rows = (quote.items || []).map(item => `
+    <tr><td>${value(item.item_type)}</td><td>${value(item.description)}</td><td class="number">${escapeHtml(item.quantity)}</td><td class="number">${escapeHtml(money(item.unit_price))}</td><td class="number"><strong>${escapeHtml(money(item.line_total))}</strong></td></tr>
+  `).join('')
+  openPrintDocument(`Presupuesto ${quote.quote_number}`, `
+    ${brandedHeader({ title: 'Presupuesto', number: quote.quote_number, date: `Emitido: ${shortDate(quote.created_at)}`, workshop, branding })}
+    <span class="document-status">${value(quote.status)}</span>
+    <h2>Cliente y motocicleta</h2>
+    <div class="grid"><div class="fact"><span>Cliente</span><strong>${value(quote.work_order?.customer?.full_name)}</strong><small>${value(quote.work_order?.customer?.phone)}</small></div><div class="fact"><span>Motocicleta</span><strong>${value(`${quote.work_order?.motorcycle?.brand || ''} ${quote.work_order?.motorcycle?.model || ''}`.trim())}</strong><small>Placa: ${value(quote.work_order?.motorcycle?.plate || 'Sin placa')} · OT: ${value(quote.work_order?.order_number)}</small></div></div>
+    <h2>Detalle del presupuesto</h2>
+    <table class="items-table"><thead><tr><th>Tipo</th><th>Descripción</th><th class="number">Cant.</th><th class="number">Precio</th><th class="number">Total</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="totals"><div><span>Subtotal</span><strong>${escapeHtml(money(quote.subtotal))}</strong></div><div><span>Descuento</span><strong>- ${escapeHtml(money(quote.discount))}</strong></div><div><span>IVA (${escapeHtml(quote.tax_rate)}%)</span><strong>${escapeHtml(money(quote.tax_amount))}</strong></div><div class="grand"><span>Total</span><strong>${escapeHtml(money(quote.total))}</strong></div></div>
+    ${quote.notes ? `<h2>Notas</h2><div class="notes">${value(quote.notes)}</div>` : ''}
+    <div class="disclaimer">Presupuesto válido hasta ${shortDate(quote.valid_until)}. Cualquier trabajo adicional deberá ser autorizado por el cliente.</div>
+    <footer>Documento generado por HCM Workshop Manager - ${escapeHtml(workshop?.name || 'Herrera Custom Motorcycle')}</footer>
+  `)
+}
+
+export function printInvoiceDocument({ invoice, workshop = null, branding = null }) {
+  const rows = (invoice.items || []).map(item => `
+    <tr><td>${value(item.item_type)}</td><td>${value(item.description)}</td><td class="number">${escapeHtml(item.quantity)}</td><td class="number">${escapeHtml(money(item.unit_price))}</td><td class="number"><strong>${escapeHtml(money(item.line_total))}</strong></td></tr>
+  `).join('')
+  const payments = (invoice.payments || []).length
+    ? `<h2>Pagos registrados</h2><table class="items-table"><thead><tr><th>Fecha</th><th>Método</th><th>Referencia</th><th class="number">Monto</th></tr></thead><tbody>${[...invoice.payments].sort((a, b) => new Date(a.paid_at) - new Date(b.paid_at)).map(item => `<tr><td>${escapeHtml(dateTime(item.paid_at))}</td><td>${value(item.payment_method)}</td><td>${value(item.reference || item.notes || 'Sin referencia')}</td><td class="number">${escapeHtml(money(item.amount))}</td></tr>`).join('')}</tbody></table>`
+    : ''
+  const balance = Number(invoice.total) - Number(invoice.amount_paid)
+  openPrintDocument(`Factura interna ${invoice.invoice_number}`, `
+    ${brandedHeader({ title: 'Comprobante interno de servicio', number: invoice.invoice_number, date: `Emitido: ${shortDate(invoice.issued_at)}`, workshop, branding })}
+    <span class="document-status">${value(invoice.status)}</span>
+    <h2>Cliente y motocicleta</h2>
+    <div class="grid"><div class="fact"><span>Cliente</span><strong>${value(invoice.work_order?.customer?.full_name)}</strong><small>${value(invoice.work_order?.customer?.phone)} · ${value(invoice.work_order?.customer?.email)}</small></div><div class="fact"><span>Motocicleta</span><strong>${value(`${invoice.work_order?.motorcycle?.brand || ''} ${invoice.work_order?.motorcycle?.model || ''}`.trim())}</strong><small>Placa: ${value(invoice.work_order?.motorcycle?.plate || 'Sin placa')} · OT: ${value(invoice.work_order?.order_number)}</small></div></div>
+    <h2>Detalle</h2><table class="items-table"><thead><tr><th>Tipo</th><th>Descripción</th><th class="number">Cant.</th><th class="number">Precio</th><th class="number">Total</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="totals"><div><span>Subtotal</span><strong>${escapeHtml(money(invoice.subtotal))}</strong></div><div><span>Descuento</span><strong>- ${escapeHtml(money(invoice.discount))}</strong></div><div><span>IVA (${escapeHtml(invoice.tax_rate)}%)</span><strong>${escapeHtml(money(invoice.tax_amount))}</strong></div><div><span>Pagado</span><strong>${escapeHtml(money(invoice.amount_paid))}</strong></div><div class="grand"><span>Saldo</span><strong>${escapeHtml(money(balance))}</strong></div></div>
+    ${payments}
+    ${invoice.notes ? `<h2>Notas</h2><div class="notes">${value(invoice.notes)}</div>` : ''}
+    <div class="disclaimer"><strong>Comprobante interno:</strong> este documento sirve para el control del taller y no sustituye el comprobante electrónico autorizado por el Ministerio de Hacienda.</div>
+    <footer>Documento generado por HCM Workshop Manager - ${escapeHtml(workshop?.name || 'Herrera Custom Motorcycle')}</footer>
   `)
 }

@@ -4,12 +4,14 @@ import {
   Boxes,
   FileText,
   MessageCircle,
+  Printer,
   Plus,
   Search,
   Trash2,
   X
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { printQuoteDocument } from '../lib/printDocuments'
 
 const emptyItem = () => ({
   item_type: 'Repuesto',
@@ -32,7 +34,7 @@ const todayPlus = days => {
   return date.toISOString().slice(0, 10)
 }
 
-export default function Quotes() {
+export default function Quotes({ workshop = null, branding = null }) {
   const [quotes, setQuotes] = useState([])
   const [orders, setOrders] = useState([])
   const [products, setProducts] = useState([])
@@ -437,6 +439,8 @@ export default function Quotes() {
             </div>
 
             {selected.notes && <section className="detail-section"><h3>Notas</h3><p>{selected.notes}</p></section>}
+
+            <button className="print-document-action" type="button" onClick={() => printQuoteDocument({ quote: selected, workshop, branding })}><Printer size={18} />Imprimir presupuesto / Guardar PDF</button>
 
             {selected.status === 'Aprobado' && (selected.items || []).some(item => item.product_id && !item.inventory_deducted) && (
               <button

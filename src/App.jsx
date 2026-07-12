@@ -108,7 +108,7 @@ export default function App() {
     if (!membership?.workshop?.id) return
     supabase
       .from('workshop_settings')
-      .select('theme_mode, primary_color, accent_color, background_color, surface_color, text_color, logo_url')
+      .select('theme_mode, primary_color, accent_color, background_color, surface_color, text_color, logo_url, legal_name, tax_id, phone, email, address')
       .eq('workshop_id', membership.workshop.id)
       .single()
       .then(({ data }) => data && setBranding({ ...defaultBranding, ...data }))
@@ -160,8 +160,8 @@ export default function App() {
       />
     ),
     ordenes: <WorkOrders workshop={membership.workshop} branding={branding} />,
-    presupuestos: <Quotes />,
-    facturas: <Invoices />,
+    presupuestos: <Quotes workshop={membership.workshop} branding={branding} />,
+    facturas: <Invoices workshop={membership.workshop} branding={branding} />,
     inventario: <Inventory />,
     reportes: <Reports />,
     configuracion: (

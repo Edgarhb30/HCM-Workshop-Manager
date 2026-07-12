@@ -4,6 +4,7 @@ import {
   CreditCard,
   FileCheck2,
   MessageCircle,
+  Printer,
   Plus,
   Receipt,
   Search,
@@ -11,6 +12,7 @@ import {
   X
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { printInvoiceDocument } from '../lib/printDocuments'
 
 const money = value =>
   new Intl.NumberFormat('es-CR', {
@@ -31,7 +33,7 @@ const invoiceSelect = `
   quote:quotes(quote_number)
 `
 
-export default function Invoices() {
+export default function Invoices({ workshop = null, branding = null }) {
   const [invoices, setInvoices] = useState([])
   const [approvedQuotes, setApprovedQuotes] = useState([])
   const [search, setSearch] = useState('')
@@ -291,6 +293,8 @@ export default function Invoices() {
               <span>Pagado <strong>{money(selected.amount_paid)}</strong></span>
               <span className="grand-total">Saldo <strong>{money(Number(selected.total) - Number(selected.amount_paid))}</strong></span>
             </div>
+
+            <button className="print-document-action" type="button" onClick={() => printInvoiceDocument({ invoice: selected, workshop, branding })}><Printer size={18} />Imprimir factura / Guardar PDF</button>
 
             {!['Pagada', 'Anulada'].includes(selected.status) && (
               <form className="payment-form" onSubmit={registerPayment}>
