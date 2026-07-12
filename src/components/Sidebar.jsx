@@ -13,6 +13,7 @@ import {
   X,
   Inbox
 } from 'lucide-react'
+import { canAccessPage } from '../lib/permissions'
 
 const items = [
   ['dashboard', 'Dashboard', Gauge],
@@ -60,7 +61,7 @@ export default function Sidebar({
       </div>
 
       <nav>
-        {items.filter(([id]) => id !== 'equipo' || ['owner', 'admin'].includes(role)).map(([id, label, Icon]) => (
+        {items.filter(([id]) => canAccessPage(role, id)).map(([id, label, Icon]) => (
           <button
             key={id}
             className={page === id ? 'active' : ''}

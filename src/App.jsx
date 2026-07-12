@@ -21,6 +21,7 @@ import PublicBooking from './pages/PublicBooking'
 import ClientPortal from './pages/ClientPortal'
 import Team from './pages/Team'
 import { defaultBranding, themeVariables } from './lib/theme'
+import { canAccessPage, isReadOnlyRole, roleLabels } from './lib/permissions'
 
 const titles = {
   dashboard: 'Dashboard',
@@ -205,7 +206,18 @@ export default function App() {
   }
 
   const content =
-    pages[page] || <ComingSoon title={titles[page]} />
+    canAccessPage(membership.role, page)
+      ? pages[page] || <ComingSoon title={titles[page]} />
+      : (
+        <section className="panel role-access-denied">
+          <span className="eyebrow">PERMISOS DEL EQUIPO</span>
+          <h2>Módulo no disponible</h2>
+          <p>El rol {roleLabels[membership.role] || membership.role} no tiene acceso a esta sección.</p>
+          <button className="primary" type="button" onClick={() => setPage('dashboard')}>
+            Volver al Dashboard
+          </button>
+        </section>
+      )
 
   return (
     <div className={`app theme-${branding.theme_mode || 'light'}`} style={themeVariables(branding)}>
@@ -237,6 +249,11 @@ export default function App() {
         />
 
         <main className="content">
+          {isReadOnlyRole(membership.role) && (
+            <div className="read-only-notice">
+              Modo de consulta: puedes revisar la información, pero no modificarla.
+            </div>
+          )}
           {content}
         </main>
       </div>
