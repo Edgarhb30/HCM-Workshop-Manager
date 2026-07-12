@@ -19,6 +19,7 @@ import Settings from './pages/Settings'
 import ComingSoon from './pages/ComingSoon'
 import PublicBooking from './pages/PublicBooking'
 import ClientPortal from './pages/ClientPortal'
+import { defaultBranding, themeVariables } from './lib/theme'
 
 const titles = {
   dashboard: 'Dashboard',
@@ -44,6 +45,7 @@ export default function App() {
   const [membership, setMembership] = useState(null)
   const [membershipLoading, setMembershipLoading] = useState(false)
   const [membershipError, setMembershipError] = useState('')
+  const [branding, setBranding] = useState(defaultBranding)
 
   function receiveAppointment(appointment) {
     setReceptionAppointment(appointment)
@@ -102,6 +104,16 @@ export default function App() {
     loadMembership()
   }, [session?.user?.id])
 
+  useEffect(() => {
+    if (!membership?.workshop?.id) return
+    supabase
+      .from('workshop_settings')
+      .select('theme_mode, primary_color, accent_color, background_color, surface_color, text_color, logo_url')
+      .eq('workshop_id', membership.workshop.id)
+      .single()
+      .then(({ data }) => data && setBranding({ ...defaultBranding, ...data }))
+  }, [membership?.workshop?.id])
+
   if (publicPath === '/reservar') {
     return <PublicBooking workshopSlug="herrera-custom-motorcycle" />
   }
@@ -147,7 +159,7 @@ export default function App() {
         workshop={membership.workshop}
       />
     ),
-    ordenes: <WorkOrders />,
+    ordenes: <WorkOrders workshop={membership.workshop} branding={branding} />,
     presupuestos: <Quotes />,
     facturas: <Invoices />,
     inventario: <Inventory />,
@@ -159,6 +171,7 @@ export default function App() {
         onWorkshopUpdated={workshop =>
           setMembership(current => ({ ...current, workshop }))
         }
+        onBrandingUpdated={settings => setBranding(current => ({ ...current, ...settings }))}
       />
     )
   }
@@ -167,12 +180,14 @@ export default function App() {
     pages[page] || <ComingSoon title={titles[page]} />
 
   return (
-    <div className="app">
+    <div className={`app theme-${branding.theme_mode || 'light'}`} style={themeVariables(branding)}>
       <Sidebar
         page={page}
         setPage={setPage}
         open={menu}
         close={() => setMenu(false)}
+        workshop={membership.workshop}
+        branding={branding}
       />
 
       {menu && (

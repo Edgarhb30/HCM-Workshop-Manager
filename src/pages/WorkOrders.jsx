@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   ClipboardCheck,
   MessageCircle,
+  Printer,
   Save,
   Search,
   UserRound,
@@ -13,6 +14,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import SignaturePad from '../components/SignaturePad'
+import { printReceptionDocument } from '../lib/printDocuments'
 
 const statuses = ['Recepción', 'Diagnóstico', 'Esperando aprobación', 'Esperando repuestos', 'En reparación', 'Prueba', 'Lista para entregar', 'Entregada', 'Cancelada']
 const editableStatuses = statuses.filter(item => item !== 'Entregada')
@@ -31,7 +33,7 @@ const formatDate = value => value
   ? new Intl.DateTimeFormat('es-CR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
   : '—'
 
-export default function WorkOrders() {
+export default function WorkOrders({ workshop = null, branding = null }) {
   const [orders, setOrders] = useState([])
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('Todas')
@@ -342,6 +344,22 @@ export default function WorkOrders() {
                 Escribir por WhatsApp
               </a>
             )}
+
+            <button
+              className="print-document-action"
+              type="button"
+              disabled={loadingMedia}
+              onClick={() => printReceptionDocument({
+                order: selected,
+                photos: orderPhotos,
+                signatures: orderSignatures,
+                workshop,
+                branding
+              })}
+            >
+              <Printer size={18} />
+              Imprimir recepción / Guardar PDF
+            </button>
 
             <div className="order-detail-grid">
               <div><UserRound size={19} /><span>Cliente</span><strong>{selected.customer?.full_name || '—'}</strong><small>{selected.customer?.phone || '—'}</small></div>

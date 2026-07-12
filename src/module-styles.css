@@ -363,6 +363,90 @@
 .maintenance-history span, .maintenance-history small { display: block; color: #929ba4; }
 .maintenance-history p { margin: 6px 0; }
 .maintenance-history > article > b { font-size: .76rem; text-align: right; }
+.print-document-action { width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; color: #fff0bd; background: #302811; border: 1px solid #80631b; border-radius: 10px; padding: 11px; cursor: pointer; font-weight: 750; }
+.print-document-action:disabled { opacity: .55; cursor: wait; }
+.brand-mark img { width: 100%; height: 100%; padding: 4px; object-fit: contain; border-radius: inherit; }
+.branding-editor { display: grid; grid-template-columns: 1fr 320px; gap: 20px; align-items: start; }
+.color-field { display: grid; grid-template-columns: 48px 1fr; gap: 8px; }
+.color-field input[type="color"] { width: 48px; height: 42px; padding: 3px; cursor: pointer; }
+.branding-preview { border: 1px solid #c8ccd0; border-radius: 13px; overflow: hidden; padding: 12px; }
+.branding-preview > div { display: grid; gap: 3px; padding: 13px; border-radius: 9px; }
+.branding-preview > div span { opacity: .75; font-size: .75rem; }
+.branding-preview article { color: inherit; border-radius: 9px; padding: 16px; margin-top: 10px; box-shadow: 0 5px 18px #0002; }
+.branding-preview article h3 { margin: 5px 0 14px; }
+.branding-preview button { border: 0; border-radius: 8px; padding: 9px 11px; }
+
+/* Tema claro configurable por taller */
+.theme-light { color: var(--brand-text); background: var(--brand-background); }
+.theme-light .workspace, .theme-light .content { background: var(--brand-background); }
+.theme-light .sidebar { background: var(--brand-primary); border-color: color-mix(in srgb, var(--brand-primary), white 18%); }
+.theme-light .sidebar nav button { color: #d9dde0; }
+.theme-light .sidebar nav button:hover, .theme-light .sidebar nav button.active { color: #fff; background: color-mix(in srgb, var(--brand-primary), white 14%); }
+.theme-light .sidebar nav button.active { border-left-color: #fff; }
+.theme-light .brand-mark { background: #fff; color: var(--brand-primary); }
+.theme-light .brand span, .theme-light .version { color: #c4c8cb; }
+.theme-light .header { color: var(--brand-text); background: var(--brand-surface); border-color: #d8dbde; }
+.theme-light .header .user, .theme-light .muted { color: #626970; }
+.theme-light .eyebrow { color: var(--brand-accent); }
+.theme-light .panel, .theme-light .stat-card, .theme-light .moto-card, .theme-light .appointment-card,
+.theme-light .order-detail, .theme-light .delivery-modal { color: var(--brand-text); background: var(--brand-surface); border-color: #d8dbde; box-shadow: 0 5px 18px #18202a0b; }
+.theme-light input, .theme-light select, .theme-light textarea { color: var(--brand-text); background: #fff; border-color: #bfc4c8; }
+.theme-light .primary { color: #fff; background: var(--brand-primary); }
+.theme-light .secondary, .theme-light .icon { color: var(--brand-text); background: #eef0f1; border-color: #c9cdd0; }
+.theme-light .inline-form, .theme-light .oil-form, .theme-light .maintenance-form, .theme-light .inventory-form,
+.theme-light .movement-form, .theme-light .quote-form, .theme-light .invoice-create-form, .theme-light .payment-form,
+.theme-light .selected-summary, .theme-light .reception-ready, .theme-light .reception-section,
+.theme-light .detail-section, .theme-light .settings-fields, .theme-light .business-hours > div { color: var(--brand-text); background: #f7f8f8; border-color: #d8dbde; }
+.theme-light .work-order-card, .theme-light .selection-card, .theme-light .inventory-card, .theme-light .quote-card,
+.theme-light .invoice-card, .theme-light .portal-item, .theme-light .maintenance-history article,
+.theme-light .oil-history article, .theme-light .motorcycle-order-history article { color: var(--brand-text); background: #fff; border-color: #d8dbde; }
+.theme-light .work-order-card:hover, .theme-light .selection-card:hover { border-color: var(--brand-accent); background: #f7f8f8; }
+.theme-light .search-box { color: #656b70; background: #fff; border-color: #c9cdd0; }
+.theme-light table th, .theme-light table td { border-color: #d8dbde; }
+.theme-light th { color: #626970; }
+.theme-light .order-detail-grid > div, .theme-light .current-stock, .theme-light .media-success-summary { background: #f7f8f8; border-color: #d8dbde; }
+.theme-light .print-document-action { color: #fff; background: var(--brand-primary); border-color: var(--brand-primary); }
+.theme-light .reception-progress-step { color: #626970; }
+.theme-light .reception-progress-step.active { color: var(--brand-primary); }
+.theme-light .reception-progress-step span { background: #dfe2e4; color: #3d4348; }
+.theme-light .reception-progress-step.active span { background: var(--brand-primary); color: #fff; }
+.theme-light .record-section, .theme-light .settings-section { border-color: #d8dbde; }
+.themed-public.theme-light { color: var(--brand-text); background: var(--brand-background); }
+.themed-public.theme-light .public-card { color: var(--brand-text); background: var(--brand-surface); border-color: #d8dbde; box-shadow: 0 18px 55px #18202a18; }
+.themed-public.theme-light .public-logo, .themed-public.theme-light .primary { color: #fff; background: var(--brand-primary); }
+.themed-public.theme-light .eyebrow, .themed-public.theme-light a { color: var(--brand-accent); }
+.themed-public.theme-light .public-brand p, .themed-public.theme-light .portal-header p, .themed-public.theme-light .portal-login p { color: #626970; }
+.themed-public.theme-light input, .themed-public.theme-light select, .themed-public.theme-light textarea { color: var(--brand-text); background: #fff; border-color: #bfc4c8; }
+.themed-public.theme-light .public-form h2, .themed-public.theme-light .public-footer, .themed-public.theme-light .portal-dashboard section > h2 { border-color: #d8dbde; }
+.themed-public.theme-light .portal-item, .themed-public.theme-light .portal-list article { color: var(--brand-text); background: #f7f8f8; border-color: #d8dbde; }
+.theme-light .stat-card svg, .theme-light .order-summary-grid svg, .theme-light .work-order-card svg,
+.theme-light .order-detail-grid svg, .theme-light .reception-section-heading svg,
+.theme-light .selected-summary svg, .theme-light .reception-ready svg, .theme-light .motorcycle-facts svg,
+.theme-light .record-title svg, .theme-light .oil-history svg, .theme-light .customer-contact-card svg,
+.theme-light .customer-motorcycle-heading svg, .theme-light .customer-oil-status svg,
+.theme-light .customer-order-history svg, .theme-light .appointment-date-box svg,
+.theme-light .appointment-reception-banner svg, .theme-light .quote-total-card > svg,
+.theme-light .quote-card > svg, .theme-light .invoice-summary svg, .theme-light .invoice-card > svg,
+.theme-light .report-kpis svg, .theme-light .settings-section-title svg,
+.theme-light .media-section-heading svg, .theme-light .inventory-summary svg,
+.theme-light .maintenance-history svg { color: var(--brand-accent); }
+.theme-light .open-record, .theme-light .quote-total-card .grand-total strong,
+.theme-light .quote-detail-totals .grand-total, .theme-light .invoice-totals .grand-total,
+.theme-light .user-identity small { color: var(--brand-accent); }
+.theme-light .report-bar-track span { background: var(--brand-accent); }
+.theme-light .work-order-card:hover, .theme-light .selection-card:hover,
+.theme-light .moto-card-button:hover, .theme-light .quote-card:hover,
+.theme-light .invoice-card:hover, .theme-light .customer-edit-form { border-color: var(--brand-accent); }
+.theme-light .signature-pad { border-color: var(--brand-accent); }
+.theme-light .maintenance-alert:not(.overdue) .maintenance-alert-icon,
+.theme-light .maintenance-alert:not(.overdue) span { color: var(--brand-accent); }
+.theme-light .status-badge.recepcion { color: var(--brand-primary); background: color-mix(in srgb, var(--brand-primary), white 85%); }
+.theme-light .consume-inventory-button { color: var(--brand-primary); background: color-mix(in srgb, var(--brand-primary), white 90%); border-color: var(--brand-accent); }
+.login-screen { background: radial-gradient(circle at top, #d7d9db, #f1f2f3 48%); }
+.login-card { color: #181818; background: #fff; border-color: #cdd1d4; box-shadow: 0 18px 55px #18202a20; }
+.login-logo, .login-card .primary { color: #fff; background: #222; }
+.login-card input { color: #181818; background: #fff; border-color: #bfc4c8; }
+.login-card p { color: #626970; }
 
 @media (max-width: 760px) {
   .work-order-toolbar, .work-order-card, .reception-progress, .order-summary-grid { grid-template-columns: 1fr; }
@@ -406,6 +490,7 @@
   .maintenance-form .wide { grid-column: auto; }
   .maintenance-history article { grid-template-columns: auto 1fr; }
   .maintenance-history > article > b { grid-column: 2; text-align: left; }
+  .branding-editor { grid-template-columns: 1fr; }
 }
 
 /* Portal público y reservas */

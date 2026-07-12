@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   Building2,
+  Palette,
   CalendarClock,
   CheckCircle2,
   Save,
@@ -28,7 +29,7 @@ const defaultHours = {
   sunday: { open: false, start: '08:00', end: '17:00' }
 }
 
-export default function Settings({ workshop, role, onWorkshopUpdated }) {
+export default function Settings({ workshop, role, onWorkshopUpdated, onBrandingUpdated = () => {} }) {
   const canEdit = ['owner', 'admin'].includes(role)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -50,7 +51,13 @@ export default function Settings({ workshop, role, onWorkshopUpdated }) {
     manual_appointment_confirmation: true,
     public_booking_enabled: true,
     oil_change_interval_km: 3000,
-    business_hours: defaultHours
+    business_hours: defaultHours,
+    theme_mode: 'light',
+    primary_color: '#222222',
+    accent_color: '#666666',
+    background_color: '#f1f2f3',
+    surface_color: '#ffffff',
+    text_color: '#181818'
   })
 
   useEffect(() => { load() }, [workshop?.id])
@@ -85,7 +92,13 @@ export default function Settings({ workshop, role, onWorkshopUpdated }) {
         manual_appointment_confirmation: data.manual_appointment_confirmation,
         public_booking_enabled: data.public_booking_enabled,
         oil_change_interval_km: data.oil_change_interval_km ?? 3000,
-        business_hours: { ...defaultHours, ...(data.business_hours || {}) }
+        business_hours: { ...defaultHours, ...(data.business_hours || {}) },
+        theme_mode: data.theme_mode || 'light',
+        primary_color: data.primary_color || '#222222',
+        accent_color: data.accent_color || '#666666',
+        background_color: data.background_color || '#f1f2f3',
+        surface_color: data.surface_color || '#ffffff',
+        text_color: data.text_color || '#181818'
       })
     }
     setLoading(false)
@@ -141,6 +154,12 @@ export default function Settings({ workshop, role, onWorkshopUpdated }) {
           public_booking_enabled: form.public_booking_enabled,
           oil_change_interval_km: Number(form.oil_change_interval_km),
           business_hours: form.business_hours,
+          theme_mode: form.theme_mode,
+          primary_color: form.primary_color,
+          accent_color: form.accent_color,
+          background_color: form.background_color,
+          surface_color: form.surface_color,
+          text_color: form.text_color,
           updated_at: new Date().toISOString()
         })
         .eq('id', settingsId)
@@ -156,6 +175,7 @@ export default function Settings({ workshop, role, onWorkshopUpdated }) {
     }
 
     onWorkshopUpdated(workshopResult.data)
+    onBrandingUpdated(settingsResult.data)
     setSaved(true)
   }
 
@@ -205,6 +225,21 @@ export default function Settings({ workshop, role, onWorkshopUpdated }) {
           </div>
         </section>
       </div>
+
+      <section className="panel settings-section branding-settings">
+        <div className="settings-section-title"><Palette size={22} /><div><h3>Identidad visual</h3><p>Colores y apariencia propios de este taller</p></div></div>
+        <div className="branding-editor">
+          <div className="settings-fields">
+            <label>Apariencia<select disabled={!canEdit} value={form.theme_mode} onChange={event => update('theme_mode', event.target.value)}><option value="light">Clara</option><option value="dark">Oscura</option></select></label>
+            <label>Color principal<span className="color-field"><input disabled={!canEdit} type="color" value={form.primary_color} onChange={event => update('primary_color', event.target.value)} /><input disabled={!canEdit} value={form.primary_color} onChange={event => update('primary_color', event.target.value)} /></span></label>
+            <label>Color secundario<span className="color-field"><input disabled={!canEdit} type="color" value={form.accent_color} onChange={event => update('accent_color', event.target.value)} /><input disabled={!canEdit} value={form.accent_color} onChange={event => update('accent_color', event.target.value)} /></span></label>
+            <label>Fondo general<span className="color-field"><input disabled={!canEdit} type="color" value={form.background_color} onChange={event => update('background_color', event.target.value)} /><input disabled={!canEdit} value={form.background_color} onChange={event => update('background_color', event.target.value)} /></span></label>
+            <label>Fondo de tarjetas<span className="color-field"><input disabled={!canEdit} type="color" value={form.surface_color} onChange={event => update('surface_color', event.target.value)} /><input disabled={!canEdit} value={form.surface_color} onChange={event => update('surface_color', event.target.value)} /></span></label>
+            <label>Color del texto<span className="color-field"><input disabled={!canEdit} type="color" value={form.text_color} onChange={event => update('text_color', event.target.value)} /><input disabled={!canEdit} value={form.text_color} onChange={event => update('text_color', event.target.value)} /></span></label>
+          </div>
+          <div className="branding-preview" style={{ background: form.background_color, color: form.text_color }}><div style={{ background: form.primary_color, color: '#fff' }}><strong>{form.name}</strong><span>Workshop Manager</span></div><article style={{ background: form.surface_color }}><small style={{ color: form.accent_color }}>VISTA PREVIA</small><h3>Panel del taller</h3><button type="button" style={{ background: form.primary_color, color: '#fff' }}>Acción principal</button></article></div>
+        </div>
+      </section>
 
       <section className="panel settings-section">
         <div className="settings-section-title"><CalendarClock size={22} /><div><h3>Horario semanal</h3><p>Días y horas de atención</p></div></div>

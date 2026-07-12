@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Bike, CalendarDays, CheckCircle2, Clock3, Wrench } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { defaultBranding, themeVariables } from '../lib/theme'
 
 const initialForm = {
   customer_name: '', phone: '', email: '', brand: '', model: '',
@@ -29,6 +30,11 @@ export default function PublicBooking({ workshopSlug }) {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [success, setSuccess] = useState(false)
+  const publicTheme = { ...defaultBranding, ...(config || {}) }
+  const shellProps = {
+    className: `public-shell themed-public theme-${publicTheme.theme_mode}`,
+    style: themeVariables(publicTheme)
+  }
 
   useEffect(() => {
     supabase.rpc('get_public_workshop_config', { p_workshop_slug: workshopSlug })
@@ -97,10 +103,10 @@ export default function PublicBooking({ workshopSlug }) {
     setSuccess(true)
   }
 
-  if (loading) return <div className="public-shell"><div className="public-card">Cargando agenda…</div></div>
+  if (loading) return <div {...shellProps}><div className="public-card">Cargando agenda…</div></div>
 
   if (success) return (
-    <main className="public-shell">
+    <main {...shellProps}>
       <section className="public-card public-success">
         <CheckCircle2 size={58} />
         <span className="eyebrow">SOLICITUD RECIBIDA</span>
@@ -114,7 +120,7 @@ export default function PublicBooking({ workshopSlug }) {
   )
 
   return (
-    <main className="public-shell">
+    <main {...shellProps}>
       <section className="public-card public-booking">
         <header className="public-brand">
           <div className="public-logo">HCM</div>

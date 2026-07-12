@@ -31,15 +31,19 @@ export default function Sidebar({
   page,
   setPage,
   open,
-  close
+  close,
+  workshop,
+  branding
 }) {
   return (
     <aside className={`sidebar ${open ? 'open' : ''}`}>
       <div className="brand">
-        <div className="brand-mark">HCM</div>
+        <div className="brand-mark">
+          {branding?.logo_url ? <img src={branding.logo_url} alt={workshop?.name || 'Logo'} /> : 'HCM'}
+        </div>
 
         <div>
-          <strong>Herrera Custom</strong>
+          <strong>{workshop?.name || 'HCM Workshop'}</strong>
           <span>Workshop Manager</span>
         </div>
 

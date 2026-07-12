@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Bike, CalendarDays, FileText, LogOut, Wrench } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { defaultBranding, themeVariables } from '../lib/theme'
 
 const money = value => new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'CRC', maximumFractionDigits: 0 }).format(Number(value) || 0)
 const date = value => value ? new Intl.DateTimeFormat('es-CR', { dateStyle: 'medium' }).format(new Date(`${value.slice(0, 10)}T12:00:00`)) : '—'
@@ -16,8 +17,15 @@ export default function ClientPortal({ workshopSlug }) {
   const [needsClaim, setNeedsClaim] = useState(false)
   const [message, setMessage] = useState('')
   const [linkSent, setLinkSent] = useState(false)
+  const [publicConfig, setPublicConfig] = useState(defaultBranding)
+  const shellProps = {
+    className: `public-shell themed-public theme-${publicConfig.theme_mode || 'light'}`,
+    style: themeVariables(publicConfig)
+  }
 
   useEffect(() => {
+    supabase.rpc('get_public_workshop_config', { p_workshop_slug: workshopSlug })
+      .then(({ data }) => data && setPublicConfig({ ...defaultBranding, ...data }))
     supabase.auth.getSession().then(({ data: result, error }) => {
       if (error) setMessage(error.message)
       setSession(result?.session || null)
@@ -98,10 +106,10 @@ export default function ClientPortal({ workshopSlug }) {
     else loadPortal()
   }
 
-  if (loading) return <main className="public-shell"><section className="public-card">Cargando tu expediente…</section></main>
+  if (loading) return <main {...shellProps}><section className="public-card">Cargando tu expediente…</section></main>
 
   if (!session) return (
-    <main className="public-shell"><section className="public-card portal-login">
+    <main {...shellProps}><section className="public-card portal-login">
       <div className="public-logo">HCM</div><span className="eyebrow">PORTAL DEL CLIENTE</span><h1>Consulta tu motocicleta</h1>
       <p>Te enviaremos un código seguro a tu correo. No necesitas contraseña.</p>
       {linkSent ? (
@@ -118,7 +126,7 @@ export default function ClientPortal({ workshopSlug }) {
   )
 
   if (needsClaim) return (
-    <main className="public-shell"><section className="public-card portal-login">
+    <main {...shellProps}><section className="public-card portal-login">
       <span className="eyebrow">VERIFICACIÓN INICIAL</span><h1>Confirma tu teléfono</h1><p>Escribe el mismo número de WhatsApp que tienes registrado en el taller.</p>
       <form onSubmit={claim}><label>Teléfono o WhatsApp<input required inputMode="tel" value={phone} onChange={e => setPhone(e.target.value)} /></label>{message && <div className="alert error">{message}</div>}<button className="primary" disabled={sending}>{sending ? 'Verificando…' : 'Abrir mi expediente'}</button></form>
       <button className="secondary" onClick={() => supabase.auth.signOut()}>Usar otro correo</button>
@@ -126,7 +134,7 @@ export default function ClientPortal({ workshopSlug }) {
   )
 
   if (!data?.customer) return (
-    <main className="public-shell"><section className="public-card portal-login">
+    <main {...shellProps}><section className="public-card portal-login">
       <span className="eyebrow">PORTAL DEL CLIENTE</span>
       <h1>No pudimos abrir el expediente</h1>
       <p>Vuelve a verificar tu teléfono o inicia sesión nuevamente.</p>
@@ -137,7 +145,7 @@ export default function ClientPortal({ workshopSlug }) {
 
   const motorcycleName = id => { const moto = data.motorcycles.find(item => item.id === id); return moto ? `${moto.brand} ${moto.model}` : 'Motocicleta' }
   return (
-    <main className="public-shell portal-shell"><section className="public-card portal-dashboard">
+    <main {...shellProps} className={`${shellProps.className} portal-shell`}><section className="public-card portal-dashboard">
       <header className="portal-header"><div><span className="eyebrow">MI TALLER</span><h1>Hola, {data.customer.full_name}</h1><p>{data.workshop.name}</p></div><button className="secondary" onClick={() => supabase.auth.signOut()}><LogOut size={17} /> Salir</button></header>
       <nav className="portal-actions"><a className="primary" href="/reservar"><CalendarDays size={18} /> Reservar cita</a></nav>
       <section><h2><Bike size={21} /> Mis motocicletas</h2><div className="portal-grid">{data.motorcycles.map(moto => <article className="portal-item" key={moto.id}><strong>{moto.brand} {moto.model}</strong><span>{moto.plate || 'Sin placa'} · {moto.mileage ?? '—'} km</span><small>{moto.year || 'Año no registrado'} {moto.color ? `· ${moto.color}` : ''}</small></article>)}</div></section>
