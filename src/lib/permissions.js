@@ -13,7 +13,6 @@ const pagePermissions = {
   motos: ['owner', 'admin', 'reception', 'mechanic', 'viewer'],
   recepcion: ['owner', 'admin', 'reception'],
   ordenes: ['owner', 'admin', 'reception', 'mechanic', 'viewer'],
-  guias: ['owner', 'admin', 'mechanic'],
   presupuestos: ['owner', 'admin', 'reception', 'viewer'],
   facturas: ['owner', 'admin', 'reception', 'viewer'],
   inventario: ['owner', 'admin', 'mechanic', 'viewer'],

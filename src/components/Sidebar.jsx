@@ -11,8 +11,7 @@ import {
   Receipt,
   BarChart3,
   X,
-  Inbox,
-  BookOpenCheck
+  Inbox
 } from 'lucide-react'
 import { canAccessPage } from '../lib/permissions'
 
@@ -23,7 +22,6 @@ const items = [
   ['motos', 'Motocicletas', Bike],
   ['recepcion', 'Recepción', Inbox],
   ['ordenes', 'Órdenes de trabajo', ClipboardList],
-  ['guias', 'Guías técnicas', BookOpenCheck],
   ['presupuestos', 'Presupuestos', FileText],
   ['facturas', 'Facturación', Receipt],
   ['inventario', 'Inventario', Package],
