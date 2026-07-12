@@ -13,6 +13,7 @@ import {
 import { supabase } from '../lib/supabase'
 
 const statuses = ['Pendiente', 'Confirmada', 'Cancelada', 'Completada']
+const emptyAppointment = { customer_id: '', motorcycle_id: '', customer_name: '', phone: '', email: '', brand: '', model: '', motorcycle_year: '', plate: '', service_id: '', date: '', time: '', customer_notes: '', internal_note: '', status: 'Confirmada' }
 const localDate = date => new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
 
 function viewRange(view, reference) {
@@ -38,6 +39,11 @@ export default function Agenda({ onReceive, role }) {
   const [referenceDate, setReferenceDate] = useState(new Date().toLocaleDateString('en-CA'))
   const [blocks, setBlocks] = useState([])
   const [services, setServices] = useState([])
+  const [customers, setCustomers] = useState([])
+  const [motorcycles, setMotorcycles] = useState([])
+  const [showNewAppointment, setShowNewAppointment] = useState(false)
+  const [appointmentForm, setAppointmentForm] = useState(emptyAppointment)
+  const [savingAppointment, setSavingAppointment] = useState(false)
   const [editingAppointment, setEditingAppointment] = useState(null)
   const [reprogramForm, setReprogramForm] = useState({ service_id: '', date: '', time: '' })
   const [reprogramming, setReprogramming] = useState(false)
@@ -48,10 +54,12 @@ export default function Agenda({ onReceive, role }) {
 
   async function load() {
     setLoading(true)
-    const [appointmentsResult, blocksResult, servicesResult] = await Promise.all([
+    const [appointmentsResult, blocksResult, servicesResult, customersResult, motorcyclesResult] = await Promise.all([
       supabase.from('appointments').select('*').order('appointment_date').order('appointment_time'),
       supabase.from('schedule_blocks').select('*').gte('block_date', new Date().toLocaleDateString('en-CA')).order('block_date').order('start_time'),
-      supabase.from('appointment_services').select('*').eq('active', true).order('name')
+      supabase.from('appointment_services').select('*').eq('active', true).order('name'),
+      supabase.from('customers').select('id, full_name, phone, email').order('full_name'),
+      supabase.from('motorcycles').select('id, customer_id, brand, model, motorcycle_year, plate').order('brand')
     ])
     const { data, error } = appointmentsResult
 
@@ -61,7 +69,46 @@ export default function Agenda({ onReceive, role }) {
     else setBlocks(blocksResult.data || [])
     if (servicesResult.error) alert(servicesResult.error.message)
     else setServices(servicesResult.data || [])
+    if (customersResult.error) alert(customersResult.error.message); else setCustomers(customersResult.data || [])
+    if (motorcyclesResult.error) alert(motorcyclesResult.error.message); else setMotorcycles(motorcyclesResult.data || [])
     setLoading(false)
+  }
+
+  function chooseCustomer(customerId) {
+    const customer = customers.find(item => item.id === customerId)
+    setAppointmentForm(current => ({ ...current, customer_id: customerId, motorcycle_id: '', customer_name: customer?.full_name || '', phone: customer?.phone || '', email: customer?.email || '', brand: '', model: '', motorcycle_year: '', plate: '' }))
+  }
+
+  function chooseMotorcycle(motorcycleId) {
+    const motorcycle = motorcycles.find(item => item.id === motorcycleId)
+    setAppointmentForm(current => ({ ...current, motorcycle_id: motorcycleId, brand: motorcycle?.brand || '', model: motorcycle?.model || '', motorcycle_year: motorcycle?.motorcycle_year || '', plate: motorcycle?.plate || '' }))
+  }
+
+  async function createAppointment(event) {
+    event.preventDefault()
+    setSavingAppointment(true)
+    const { error } = await supabase.rpc('create_staff_appointment', {
+      p_customer_id: appointmentForm.customer_id || null,
+      p_motorcycle_id: appointmentForm.motorcycle_id || null,
+      p_customer_name: appointmentForm.customer_name,
+      p_phone: appointmentForm.phone,
+      p_email: appointmentForm.email,
+      p_brand: appointmentForm.brand,
+      p_model: appointmentForm.model,
+      p_motorcycle_year: appointmentForm.motorcycle_year ? Number(appointmentForm.motorcycle_year) : null,
+      p_plate: appointmentForm.plate,
+      p_service_id: appointmentForm.service_id,
+      p_date: appointmentForm.date,
+      p_time: appointmentForm.time,
+      p_customer_notes: appointmentForm.customer_notes,
+      p_internal_note: appointmentForm.internal_note,
+      p_status: appointmentForm.status
+    })
+    setSavingAppointment(false)
+    if (error) return alert(`No se pudo crear la cita: ${error.message}`)
+    setAppointmentForm(emptyAppointment)
+    setShowNewAppointment(false)
+    load()
   }
 
   function startReprogramming(appointment) {
@@ -176,10 +223,30 @@ export default function Agenda({ onReceive, role }) {
           <p className="muted">Confirma, contacta o lleva una cita directamente a recepción.</p>
         </div>
         <div className="agenda-heading-actions">
+          {canManage && <button className="primary compact" type="button" onClick={() => setShowNewAppointment(!showNewAppointment)}><Plus size={17} />Nueva cita</button>}
           {canManage && <button className="primary compact" type="button" onClick={() => setShowBlockForm(!showBlockForm)}><Plus size={17} />Bloquear horario</button>}
           <button className="secondary" type="button" onClick={load}>Actualizar</button>
         </div>
       </div>
+
+      {canManage && showNewAppointment && <form className="staff-appointment-form" onSubmit={createAppointment}>
+        <h3 className="wide">Crear cita desde el taller</h3>
+        <label>Cliente existente<select value={appointmentForm.customer_id} onChange={event => chooseCustomer(event.target.value)}><option value="">Persona nueva / no registrada</option>{customers.map(customer => <option value={customer.id} key={customer.id}>{customer.full_name} · {customer.phone}</option>)}</select></label>
+        <label>Motocicleta existente<select disabled={!appointmentForm.customer_id} value={appointmentForm.motorcycle_id} onChange={event => chooseMotorcycle(event.target.value)}><option value="">Escribir motocicleta</option>{motorcycles.filter(motorcycle => motorcycle.customer_id === appointmentForm.customer_id).map(motorcycle => <option value={motorcycle.id} key={motorcycle.id}>{motorcycle.brand} {motorcycle.model} · {motorcycle.plate || 'Sin placa'}</option>)}</select></label>
+        <label>Nombre<input required value={appointmentForm.customer_name} onChange={event => setAppointmentForm({ ...appointmentForm, customer_name: event.target.value })} /></label>
+        <label>Teléfono<input required value={appointmentForm.phone} onChange={event => setAppointmentForm({ ...appointmentForm, phone: event.target.value })} /></label>
+        <label>Correo<input type="email" value={appointmentForm.email} onChange={event => setAppointmentForm({ ...appointmentForm, email: event.target.value })} /></label>
+        <label>Marca<input required value={appointmentForm.brand} onChange={event => setAppointmentForm({ ...appointmentForm, brand: event.target.value })} /></label>
+        <label>Modelo<input required value={appointmentForm.model} onChange={event => setAppointmentForm({ ...appointmentForm, model: event.target.value })} /></label>
+        <label>Placa<input value={appointmentForm.plate} onChange={event => setAppointmentForm({ ...appointmentForm, plate: event.target.value.toUpperCase() })} /></label>
+        <label>Servicio<select required value={appointmentForm.service_id} onChange={event => setAppointmentForm({ ...appointmentForm, service_id: event.target.value })}><option value="">Seleccionar</option>{services.map(service => <option value={service.id} key={service.id}>{service.name} · {service.duration_minutes} min</option>)}</select></label>
+        <label>Fecha<input required type="date" min={new Date().toLocaleDateString('en-CA')} value={appointmentForm.date} onChange={event => setAppointmentForm({ ...appointmentForm, date: event.target.value })} /></label>
+        <label>Hora<input required type="time" value={appointmentForm.time} onChange={event => setAppointmentForm({ ...appointmentForm, time: event.target.value })} /></label>
+        <label>Estado<select value={appointmentForm.status} onChange={event => setAppointmentForm({ ...appointmentForm, status: event.target.value })}><option>Pendiente</option><option>Confirmada</option></select></label>
+        <label className="wide">Solicitud del cliente<textarea rows="2" value={appointmentForm.customer_notes} onChange={event => setAppointmentForm({ ...appointmentForm, customer_notes: event.target.value })} /></label>
+        <label className="wide">Nota interna<textarea rows="2" value={appointmentForm.internal_note} onChange={event => setAppointmentForm({ ...appointmentForm, internal_note: event.target.value })} /></label>
+        <button className="primary" disabled={savingAppointment}>{savingAppointment ? 'Comprobando…' : 'Crear cita'}</button>
+      </form>}
 
       {canManage && showBlockForm && <form className="schedule-block-form" onSubmit={saveBlock}>
         <label>Fecha<input required type="date" min={new Date().toLocaleDateString('en-CA')} value={blockForm.block_date} onChange={event => setBlockForm({ ...blockForm, block_date: event.target.value })} /></label>
