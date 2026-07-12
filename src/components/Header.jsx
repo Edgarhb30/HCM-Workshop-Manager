@@ -1,4 +1,5 @@
 import { LogOut, Menu } from 'lucide-react'
+import Notifications from './Notifications'
 
 const roleNames = {
   owner: 'Propietario',
@@ -12,10 +13,12 @@ export default function Header({
   title,
   email,
   userName,
+  userId,
   workshop,
   role,
   logout,
-  openMenu
+  openMenu,
+  onNavigate
 }) {
   return (
     <header className="header">
@@ -31,6 +34,7 @@ export default function Header({
       </div>
 
       <div className="user">
+        <Notifications userId={userId} workshopId={workshop?.id} onNavigate={onNavigate} />
         <div className="user-identity">
           <span>{userName || email}</span>
           {userName && <small>{email}</small>}

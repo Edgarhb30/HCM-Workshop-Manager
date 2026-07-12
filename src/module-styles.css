@@ -625,3 +625,15 @@
   align-items: center;
   gap: 8px;
 }
+
+.notifications { position: relative; }
+.notification-trigger { position: relative; }
+.notification-trigger > span { position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 10px; background: #111; color: #fff; font-size: 11px; display: grid; place-items: center; }
+.notification-panel { position: absolute; z-index: 80; top: calc(100% + 10px); right: 0; width: min(390px, calc(100vw - 30px)); max-height: 520px; overflow: hidden; border: 1px solid var(--border-color, #ddd); border-radius: 16px; background: var(--surface-color, #fff); color: var(--text-color, #222); box-shadow: 0 18px 50px rgba(0,0,0,.18); }
+.notification-heading { display: flex; align-items: center; justify-content: space-between; padding: 14px; border-bottom: 1px solid var(--border-color, #ddd); }
+.notification-heading button { display: inline-flex; align-items: center; gap: 5px; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.notification-list { max-height: 430px; overflow: auto; }
+.notification-list > button { width: 100%; padding: 13px 14px; border: 0; border-bottom: 1px solid var(--border-color, #eee); background: transparent; color: inherit; text-align: left; cursor: pointer; display: grid; gap: 4px; }
+.notification-list > button.unread { background: color-mix(in srgb, var(--primary-color, #111) 8%, var(--surface-color, #fff)); }
+.notification-list > button span, .notification-list > button small { opacity: .72; }
+.notification-list > p { padding: 22px; text-align: center; opacity: .7; }

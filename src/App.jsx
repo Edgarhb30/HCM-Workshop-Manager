@@ -250,9 +250,11 @@ export default function App() {
           title={titles[page]}
           email={session.user.email}
           userName={membership.display_name}
+          userId={session.user.id}
           workshop={membership.workshop}
           role={membership.role}
           openMenu={() => setMenu(true)}
+          onNavigate={setPage}
           logout={() => supabase.auth.signOut()}
         />
 
