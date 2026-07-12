@@ -5,7 +5,7 @@ export const defaultBranding = {
   background_color: '#f1f2f3',
   surface_color: '#ffffff',
   text_color: '#181818',
-  logo_url: '',
+  logo_url: '/hcm-logo.jpg',
   legal_name: '',
   tax_id: '',
   phone: '',

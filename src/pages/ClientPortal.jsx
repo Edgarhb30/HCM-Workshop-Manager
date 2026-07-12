@@ -141,7 +141,7 @@ export default function ClientPortal({ workshopSlug }) {
 
   if (!session) return (
     <main {...shellProps}><section className="public-card portal-login">
-      <div className="public-logo">HCM</div><span className="eyebrow">PORTAL DEL CLIENTE</span><h1>Consulta tu motocicleta</h1>
+      <div className="public-logo"><img src="/hcm-logo.jpg" alt="Herrera Custom Motorcycle" /></div><span className="eyebrow">PORTAL DEL CLIENTE</span><h1>Consulta tu motocicleta</h1>
       <p>Te enviaremos un código seguro a tu correo. No necesitas contraseña.</p>
       {linkSent ? (
         <form onSubmit={verifyCode}>

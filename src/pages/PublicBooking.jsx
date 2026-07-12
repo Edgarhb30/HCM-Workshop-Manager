@@ -113,7 +113,7 @@ export default function PublicBooking({ workshopSlug }) {
     <main {...shellProps}>
       <section className="public-card public-booking">
         <header className="public-brand">
-          <div className="public-logo">HCM</div>
+          <div className="public-logo"><img src={config?.logo_url || '/hcm-logo.jpg'} alt={config?.name || 'Herrera Custom Motorcycle'} /></div>
           <div><span className="eyebrow">AGENDA EN LÍNEA</span><h1>{config?.name || 'Herrera Custom Motorcycle'}</h1><p>Solicita tu espacio en el taller.</p></div>
         </header>
         {!config?.public_booking_enabled ? <div className="alert error">Las reservas públicas están desactivadas.</div> : (

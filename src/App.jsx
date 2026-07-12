@@ -124,7 +124,7 @@ export default function App() {
       .select('theme_mode, primary_color, accent_color, background_color, surface_color, text_color, logo_url, legal_name, tax_id, phone, email, address')
       .eq('workshop_id', membership.workshop.id)
       .single()
-      .then(({ data }) => data && setBranding({ ...defaultBranding, ...data }))
+      .then(({ data }) => data && setBranding({ ...defaultBranding, ...data, logo_url: data.logo_url || defaultBranding.logo_url }))
   }, [membership?.workshop?.id])
 
   if (publicPath === '/reservar') {
