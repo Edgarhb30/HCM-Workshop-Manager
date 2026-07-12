@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   CalendarDays,
   CalendarClock,
+  ChevronLeft,
+  ChevronRight,
   MessageCircle,
   Plus,
   Search,
@@ -11,6 +13,20 @@ import {
 import { supabase } from '../lib/supabase'
 
 const statuses = ['Pendiente', 'Confirmada', 'Cancelada', 'Completada']
+const localDate = date => new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+
+function viewRange(view, reference) {
+  const date = new Date(`${reference}T12:00:00`)
+  if (view === 'list') return null
+  if (view === 'today') return [reference, reference]
+  if (view === 'week') {
+    const start = new Date(date)
+    start.setDate(date.getDate() - ((date.getDay() + 6) % 7))
+    const end = new Date(start); end.setDate(start.getDate() + 6)
+    return [localDate(start), localDate(end)]
+  }
+  return [localDate(new Date(date.getFullYear(), date.getMonth(), 1)), localDate(new Date(date.getFullYear(), date.getMonth() + 1, 0))]
+}
 
 export default function Agenda({ onReceive, role }) {
   const canManage = ['owner', 'admin', 'reception'].includes(role)
@@ -18,6 +34,8 @@ export default function Agenda({ onReceive, role }) {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('Todas')
+  const [view, setView] = useState('today')
+  const [referenceDate, setReferenceDate] = useState(new Date().toLocaleDateString('en-CA'))
   const [blocks, setBlocks] = useState([])
   const [services, setServices] = useState([])
   const [editingAppointment, setEditingAppointment] = useState(null)
@@ -119,6 +137,7 @@ export default function Agenda({ onReceive, role }) {
 
   const filteredRows = useMemo(() => {
     const term = search.toLowerCase().trim()
+    const range = viewRange(view, referenceDate)
     return rows.filter(appointment => {
       const matchesStatus =
         statusFilter === 'Todas' || appointment.status === statusFilter
@@ -130,9 +149,23 @@ export default function Agenda({ onReceive, role }) {
         appointment.plate,
         appointment.service
       ].filter(Boolean).join(' ').toLowerCase()
-      return matchesStatus && text.includes(term)
+      const matchesRange = !range || (appointment.appointment_date >= range[0] && appointment.appointment_date <= range[1])
+      return matchesStatus && matchesRange && text.includes(term)
     })
-  }, [rows, search, statusFilter])
+  }, [rows, search, statusFilter, view, referenceDate])
+
+  function navigate(direction) {
+    const date = new Date(`${referenceDate}T12:00:00`)
+    if (view === 'today') date.setDate(date.getDate() + direction)
+    if (view === 'week') date.setDate(date.getDate() + direction * 7)
+    if (view === 'month') date.setMonth(date.getMonth() + direction)
+    setReferenceDate(localDate(date))
+  }
+
+  const range = viewRange(view, referenceDate)
+  const rangeLabel = view === 'list' ? 'Todas las fechas' : view === 'today'
+    ? new Date(`${referenceDate}T12:00:00`).toLocaleDateString('es-CR', { dateStyle: 'full' })
+    : `${new Date(`${range[0]}T12:00:00`).toLocaleDateString('es-CR', { dateStyle: 'medium' })} — ${new Date(`${range[1]}T12:00:00`).toLocaleDateString('es-CR', { dateStyle: 'medium' })}`
 
   return (
     <section className="panel">
@@ -173,6 +206,18 @@ export default function Agenda({ onReceive, role }) {
           {statuses.map(status => <option key={status}>{status}</option>)}
         </select>
         <strong>{filteredRows.length} citas</strong>
+      </div>
+
+      <div className="agenda-viewbar">
+        <div className="agenda-view-buttons">
+          {[['today','Hoy'],['week','Semana'],['month','Mes'],['list','Lista']].map(([id, label]) => <button className={view === id ? 'active' : ''} type="button" key={id} onClick={() => setView(id)}>{label}</button>)}
+        </div>
+        <div className="agenda-date-navigation">
+          {view !== 'list' && <button className="icon" type="button" onClick={() => navigate(-1)}><ChevronLeft size={18} /></button>}
+          <strong>{rangeLabel}</strong>
+          {view !== 'list' && <button className="icon" type="button" onClick={() => navigate(1)}><ChevronRight size={18} /></button>}
+          {view !== 'list' && referenceDate !== new Date().toLocaleDateString('en-CA') && <button className="secondary compact" type="button" onClick={() => setReferenceDate(new Date().toLocaleDateString('en-CA'))}>Volver a hoy</button>}
+        </div>
       </div>
 
       {loading ? <div className="empty">Cargando citas...</div> : (

@@ -671,4 +671,11 @@
 .reprogram-form { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto auto; gap: 10px; align-items: end; width: 100%; padding: 12px; border-top: 1px solid var(--border-color, #ddd); }
 .reprogram-form label { display: grid; gap: 5px; font-weight: 700; }
 @media (max-width: 850px) { .reprogram-form { grid-template-columns: 1fr; } }
+.agenda-viewbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 14px 0; flex-wrap: wrap; }
+.agenda-view-buttons { display: inline-flex; padding: 4px; border: 1px solid var(--border-color, #ddd); border-radius: 12px; background: var(--surface-color, #fff); }
+.agenda-view-buttons button { padding: 8px 12px; border: 0; border-radius: 8px; background: transparent; color: inherit; cursor: pointer; font-weight: 700; }
+.agenda-view-buttons button.active { background: var(--primary-color, #111); color: #fff; }
+.agenda-date-navigation { display: flex; align-items: center; gap: 8px; }
+.agenda-date-navigation > strong { min-width: 210px; text-align: center; text-transform: capitalize; }
+@media (max-width: 650px) { .agenda-date-navigation { width: 100%; flex-wrap: wrap; } .agenda-date-navigation > strong { flex: 1; min-width: 150px; } }
 @media (max-width: 700px) { .diagnostic-form { grid-template-columns: 1fr; } .diagnostic-form .wide { grid-column: auto; } }
