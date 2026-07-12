@@ -650,3 +650,14 @@
 .diagnostic-result > div { display: grid; gap: 3px; }
 .diagnostic-result p { margin: 8px 0 0; }
 @media (max-width: 700px) { .diagnostic-form { grid-template-columns: 1fr; } .diagnostic-form .wide { grid-column: auto; } }
+.guide-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 22px; }
+.guide-form label { display: grid; gap: 6px; font-weight: 700; }
+.guide-form .wide { grid-column: 1 / -1; }
+.guide-steps { display: grid; gap: 12px; }
+.guide-steps article { position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 14px; border: 1px solid var(--border-color, #ddd); border-radius: 14px; }
+.guide-steps article > strong { grid-column: 1 / -1; }
+.guide-steps article > .icon { position: absolute; top: 8px; right: 8px; }
+.guide-list { display: grid; gap: 10px; }
+.guide-list > article { display: flex; gap: 12px; padding: 14px; border: 1px solid var(--border-color, #ddd); border-radius: 14px; }
+.guide-list > article > div { display: grid; gap: 3px; }
+@media (max-width: 700px) { .guide-form, .guide-steps article { grid-template-columns: 1fr; } .guide-form .wide, .guide-steps article > strong { grid-column: auto; } }

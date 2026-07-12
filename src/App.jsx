@@ -20,6 +20,7 @@ import ComingSoon from './pages/ComingSoon'
 import PublicBooking from './pages/PublicBooking'
 import ClientPortal from './pages/ClientPortal'
 import Team from './pages/Team'
+import DiagnosticGuides from './pages/DiagnosticGuides'
 import { defaultBranding, themeVariables } from './lib/theme'
 import { canAccessPage, isReadOnlyRole, roleLabels } from './lib/permissions'
 
@@ -30,6 +31,7 @@ const titles = {
   motos: 'Motocicletas',
   recepcion: 'Recepción de motocicletas',
   ordenes: 'Órdenes de trabajo',
+  guias: 'Guías técnicas',
   presupuestos: 'Presupuestos',
   facturas: 'Facturación',
   inventario: 'Inventario',
@@ -195,6 +197,7 @@ export default function App() {
       />
     ),
     ordenes: <WorkOrders workshop={membership.workshop} branding={branding} role={membership.role} userId={session.user.id} />,
+    guias: <DiagnosticGuides />,
     presupuestos: <Quotes workshop={membership.workshop} branding={branding} role={membership.role} />,
     facturas: <Invoices workshop={membership.workshop} branding={branding} role={membership.role} />,
     inventario: <Inventory role={membership.role} />,
