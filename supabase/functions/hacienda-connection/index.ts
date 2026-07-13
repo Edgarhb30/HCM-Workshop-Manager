@@ -20,6 +20,11 @@ function getServiceKey() {
   return Object.values(values)[0] as string | undefined
 }
 
+const xmlEscape = (value: unknown) => String(value ?? '')
+  .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+  .replaceAll('"', '&quot;').replaceAll("'", '&apos;')
+const fiscalMoney = (value: unknown) => Number(value || 0).toFixed(5)
+
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (req.method !== 'POST') return json({ error: 'Método no permitido' }, 405)
@@ -42,7 +47,7 @@ Deno.serve(async req => {
       .select('workshop_id, role, active')
       .eq('user_id', userResult.user.id)
       .eq('active', true)
-      .in('role', ['preview', 'cabys_search'].includes(action) ? ['owner', 'admin', 'reception'] : ['owner', 'admin'])
+      .in('role', ['preview', 'xml_preview', 'cabys_search'].includes(action) ? ['owner', 'admin', 'reception'] : ['owner', 'admin'])
       .limit(1)
       .maybeSingle()
     if (membershipError || !membership) return json({ error: 'No tienes permiso para realizar esta operación fiscal' }, 403)
@@ -104,7 +109,7 @@ Deno.serve(async req => {
       })
     }
 
-    if (action === 'preview') {
+    if (['preview', 'xml_preview'].includes(action)) {
       const invoiceId = String(requestBody?.invoice_id || '')
       const documentType = String(requestBody?.document_type || '')
       if (!invoiceId || !['01', '04'].includes(documentType)) {
@@ -171,7 +176,7 @@ Deno.serve(async req => {
         if (!customer?.email) missing.push('Correo del receptor')
       }
 
-      return json({
+      const preview = {
         ok: true,
         ready: missing.length === 0,
         document_type: documentType,
@@ -182,7 +187,34 @@ Deno.serve(async req => {
         line_count: items?.length || 0,
         missing,
         message: missing.length ? 'El borrador necesita completar algunos datos' : 'El comprobante está listo para generar el XML de prueba'
+      }
+      if (action === 'preview' || missing.length) return json(preview)
+      if (documentType !== '04') return json({ error: 'La generación XML de factura se habilitará después de validar primero el tiquete' }, 400)
+      if (Number(invoice.discount || 0) !== 0) return json({ error: 'El XML de prueba todavía no admite descuentos globales' }, 400)
+
+      const issueDate = new Date()
+      const dd = String(issueDate.getUTCDate()).padStart(2, '0')
+      const mm = String(issueDate.getUTCMonth() + 1).padStart(2, '0')
+      const yy = String(issueDate.getUTCFullYear()).slice(-2)
+      const nextNumber = Number(settings.last_invoice_consecutive || 0) + 1
+      const consecutive = `${settings.branch_code}${settings.terminal_code}04${String(nextNumber).padStart(10, '0')}`
+      const issuerNumber = String(settings.identification_number).padStart(12, '0').slice(-12)
+      const fiscalKey = `506${dd}${mm}${yy}${issuerNumber}${consecutive}100000000`
+      const lines = (items || []).map((item, index) => {
+        const base = Number(item.quantity) * Number(item.unit_price)
+        const tax = base * Number(item.fiscal_tax_rate || 0) / 100
+        return {
+          xml: `<LineaDetalle><NumeroLinea>${index + 1}</NumeroLinea><CodigoCABYS>${xmlEscape(item.cabys_code)}</CodigoCABYS><Cantidad>${Number(item.quantity).toFixed(3)}</Cantidad><UnidadMedida>${xmlEscape(item.unit_code)}</UnidadMedida><Detalle>${xmlEscape(item.description)}</Detalle><PrecioUnitario>${fiscalMoney(item.unit_price)}</PrecioUnitario><MontoTotal>${fiscalMoney(base)}</MontoTotal><SubTotal>${fiscalMoney(base)}</SubTotal><BaseImponible>${fiscalMoney(base)}</BaseImponible><Impuesto><Codigo>01</Codigo><CodigoTarifaIVA>${xmlEscape(item.tax_rate_code)}</CodigoTarifaIVA><Tarifa>${Number(item.fiscal_tax_rate || 0).toFixed(2)}</Tarifa><Monto>${fiscalMoney(tax)}</Monto></Impuesto><ImpuestoAsumidoEmisorFabrica>0.00000</ImpuestoAsumidoEmisorFabrica><ImpuestoNeto>${fiscalMoney(tax)}</ImpuestoNeto><MontoTotalLinea>${fiscalMoney(base + tax)}</MontoTotalLinea></LineaDetalle>`,
+          base, tax, service: item.item_type === 'Mano de obra'
+        }
       })
+      const serviceTotal = lines.filter(line => line.service).reduce((sum, line) => sum + line.base, 0)
+      const goodsTotal = lines.filter(line => !line.service).reduce((sum, line) => sum + line.base, 0)
+      const taxTotal = lines.reduce((sum, line) => sum + line.tax, 0)
+      const saleTotal = serviceTotal + goodsTotal
+      const neighborhood = settings.neighborhood_code ? `<Barrio>${xmlEscape(settings.neighborhood_code)}</Barrio>` : ''
+      const xml = `<?xml version="1.0" encoding="UTF-8"?><TiqueteElectronico xmlns="https://cdn.comprobanteselectronicos.go.cr/xml-schemas/v4.4/tiqueteElectronico"><Clave>${fiscalKey}</Clave><ProveedorSistemas>${xmlEscape(settings.identification_number)}</ProveedorSistemas><CodigoActividadEmisor>${xmlEscape(settings.economic_activity_code)}</CodigoActividadEmisor><NumeroConsecutivo>${consecutive}</NumeroConsecutivo><FechaEmision>${issueDate.toISOString()}</FechaEmision><Emisor><Nombre>${xmlEscape(settings.issuer_name)}</Nombre><Identificacion><Tipo>${xmlEscape(settings.identification_type)}</Tipo><Numero>${xmlEscape(settings.identification_number)}</Numero></Identificacion><Ubicacion><Provincia>${xmlEscape(settings.province_code)}</Provincia><Canton>${xmlEscape(settings.canton_code)}</Canton><Distrito>${xmlEscape(settings.district_code)}</Distrito>${neighborhood}<OtrasSenas>${xmlEscape(settings.other_signs)}</OtrasSenas></Ubicacion><Telefono><CodigoPais>${xmlEscape(settings.phone_country_code)}</CodigoPais><NumTelefono>${xmlEscape(settings.phone_number)}</NumTelefono></Telefono><CorreoElectronico>${xmlEscape(settings.email)}</CorreoElectronico></Emisor><CondicionVenta>01</CondicionVenta><DetalleServicio>${lines.map(line => line.xml).join('')}</DetalleServicio><ResumenFactura><CodigoTipoMoneda><CodigoMoneda>CRC</CodigoMoneda><TipoCambio>1.00000</TipoCambio></CodigoTipoMoneda>${serviceTotal ? `<TotalServGravados>${fiscalMoney(serviceTotal)}</TotalServGravados>` : ''}${goodsTotal ? `<TotalMercanciasGravadas>${fiscalMoney(goodsTotal)}</TotalMercanciasGravadas>` : ''}<TotalGravado>${fiscalMoney(saleTotal)}</TotalGravado><TotalVenta>${fiscalMoney(saleTotal)}</TotalVenta><TotalVentaNeta>${fiscalMoney(saleTotal)}</TotalVentaNeta><TotalDesgloseImpuesto><Codigo>01</Codigo><CodigoTarifaIVA>08</CodigoTarifaIVA><TotalMontoImpuesto>${fiscalMoney(taxTotal)}</TotalMontoImpuesto></TotalDesgloseImpuesto><TotalImpuesto>${fiscalMoney(taxTotal)}</TotalImpuesto><TotalComprobante>${fiscalMoney(saleTotal + taxTotal)}</TotalComprobante></ResumenFactura></TiqueteElectronico>`
+      return json({ ...preview, xml, simulated: true, fiscal_key: fiscalKey, consecutive })
     }
 
     if (action !== 'test') return json({ error: 'Operación no reconocida' }, 400)

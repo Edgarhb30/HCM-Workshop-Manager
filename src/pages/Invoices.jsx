@@ -154,6 +154,23 @@ export default function Invoices({ workshop = null, branding = null, role }) {
     setFiscalPreview(data)
   }
 
+  async function downloadXmlPreview() {
+    if (!selected) return
+    setCheckingFiscal(true)
+    const { data, error } = await supabase.functions.invoke('hacienda-connection', {
+      body: { action: 'xml_preview', invoice_id: selected.id, document_type: fiscalType }
+    })
+    setCheckingFiscal(false)
+    if (error || !data?.ok || !data?.xml) return alert(data?.error || data?.message || error?.message || 'No fue posible generar el XML.')
+    const blob = new Blob([data.xml], { type: 'application/xml;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `PRUEBA-${data.consecutive}.xml`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   async function searchCabys(event) {
     event.preventDefault()
     if (cabysQuery.trim().length < 3) return alert('Escribe al menos tres letras para buscar.')
@@ -367,6 +384,7 @@ export default function Invoices({ workshop = null, branding = null, role }) {
                 <strong>{fiscalPreview.message}</strong>
                 <span>{fiscalPreview.document_name} · {fiscalPreview.line_count} líneas · {money(fiscalPreview.total)}</span>
                 {!!fiscalPreview.missing?.length && <ul>{fiscalPreview.missing.map(item => <li key={item}>{item}</li>)}</ul>}
+                {fiscalPreview.ready && fiscalType === '04' && <button type="button" className="secondary compact" disabled={checkingFiscal} onClick={downloadXmlPreview}><FileCheck2 size={17} />Descargar XML de prueba</button>}
               </div>}
               <form className="cabys-search" onSubmit={searchCabys}>
                 <h4>Buscador oficial CABYS</h4>
