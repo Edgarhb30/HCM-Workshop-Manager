@@ -50,6 +50,7 @@ export default function Invoices({ workshop = null, branding = null, role }) {
   const [cabysQuery, setCabysQuery] = useState('')
   const [cabysResults, setCabysResults] = useState([])
   const [searchingCabys, setSearchingCabys] = useState(false)
+  const [cabysSearched, setCabysSearched] = useState(false)
   const [payment, setPayment] = useState({
     amount: '',
     payment_method: 'SINPE',
@@ -132,6 +133,7 @@ export default function Invoices({ workshop = null, branding = null, role }) {
     setCabysItemId(invoice.items?.find(item => !item.cabys_code)?.id || invoice.items?.[0]?.id || '')
     setCabysQuery(invoice.items?.find(item => !item.cabys_code)?.description || '')
     setCabysResults([])
+    setCabysSearched(false)
     setPayment({
       amount: balance > 0 ? String(balance) : '',
       payment_method: 'SINPE',
@@ -155,13 +157,14 @@ export default function Invoices({ workshop = null, branding = null, role }) {
   async function searchCabys(event) {
     event.preventDefault()
     if (cabysQuery.trim().length < 3) return alert('Escribe al menos tres letras para buscar.')
-    setSearchingCabys(true); setCabysResults([])
+    setSearchingCabys(true); setCabysResults([]); setCabysSearched(false)
     const { data, error } = await supabase.functions.invoke('hacienda-connection', {
       body: { action: 'cabys_search', query: cabysQuery.trim() }
     })
     setSearchingCabys(false)
     if (error || !data?.ok) return alert(data?.error || error?.message || 'No fue posible consultar CABYS.')
     setCabysResults(data.results || [])
+    setCabysSearched(true)
   }
 
   async function chooseCabys(result) {
@@ -369,7 +372,9 @@ export default function Invoices({ workshop = null, branding = null, role }) {
                 <h4>Buscador oficial CABYS</h4>
                 <label>Línea de la factura<select value={cabysItemId} onChange={event => setCabysItemId(event.target.value)}>{(selected.items || []).map(item => <option key={item.id} value={item.id}>{item.description} {item.cabys_code ? `· ${item.cabys_code}` : '· sin CABYS'}</option>)}</select></label>
                 <div className="cabys-search-row"><input value={cabysQuery} onChange={event => setCabysQuery(event.target.value)} placeholder="Ejemplo: mantenimiento motocicleta" /><button className="secondary compact" disabled={searchingCabys}>{searchingCabys ? 'Buscando…' : 'Buscar CABYS'}</button></div>
+                <button type="button" className="cabys-suggestion" onClick={() => { setCabysQuery('mantenimiento motocicleta'); setCabysResults([{ code: '8714200000000', description: 'Servicios de mantenimiento y reparación de motocicletas', tax_rate: 13, category: 'Servicios de mantenimiento y reparación' }]); setCabysSearched(true) }}><strong>Sugerencia para trabajos generales de taller</strong><span>8714200000000 · Mantenimiento y reparación de motocicletas</span></button>
                 {!!cabysResults.length && <div className="cabys-results">{cabysResults.map(result => <button type="button" key={result.code} onClick={() => chooseCabys(result)}><strong>{result.description}</strong><span>{result.code} · IVA {result.tax_rate}%</span>{result.category && <small>{result.category}</small>}</button>)}</div>}
+                {cabysSearched && !cabysResults.length && <p className="muted">No hubo coincidencias. Prueba con menos palabras, por ejemplo “aceite”, “bujía” o “mantenimiento motocicleta”.</p>}
               </form>
             </section>}
 

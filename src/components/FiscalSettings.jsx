@@ -14,6 +14,13 @@ const emptyForm = {
   credentials_configured: false, signing_key_configured: false
 }
 
+function normalizeActivityCode(value) {
+  const text = String(value || '').trim()
+  if (/^\d{4}\.\d$/.test(text)) return text.replace('.', '').padEnd(6, '0')
+  const digits = text.replace(/[^0-9]/g, '')
+  return digits.length === 5 ? digits.padEnd(6, '0') : digits
+}
+
 export default function FiscalSettings({ workshop, role }) {
   const canEdit = ['owner', 'admin'].includes(role)
   const [form, setForm] = useState(emptyForm)
@@ -60,11 +67,13 @@ export default function FiscalSettings({ workshop, role }) {
     const cantonCode = cantonDigits ? cantonDigits.padStart(2, '0') : ''
     const districtCode = districtDigits ? districtDigits.padStart(2, '0') : ''
     const neighborhoodCode = neighborhoodDigits ? neighborhoodDigits.padStart(2, '0') : null
+    const activityCode = normalizeActivityCode(form.economic_activity_code)
 
     if (!/^[1-7]$/.test(provinceCode)) return alert('Provincia debe ser un número del 1 al 7.')
     if (!/^[0-9]{2}$/.test(cantonCode)) return alert('Cantón debe contener dos números. Ejemplo: 01.')
     if (!/^[0-9]{2}$/.test(districtCode)) return alert('Distrito debe contener dos números. Ejemplo: 01.')
     if (neighborhoodCode && !/^[0-9]{2}$/.test(neighborhoodCode)) return alert('Barrio debe contener dos números o quedar vacío.')
+    if (!/^[0-9]{6}$/.test(activityCode)) return alert('La actividad económica debe tener 6 dígitos. Puedes escribir 4540.0 y HCM la convertirá automáticamente.')
 
     setSaving(true)
     const payload = {
@@ -73,7 +82,7 @@ export default function FiscalSettings({ workshop, role }) {
       issuer_name: form.issuer_name.trim(),
       identification_type: form.identification_type,
       identification_number: form.identification_number.replace(/[^0-9]/g, ''),
-      economic_activity_code: form.economic_activity_code.replace(/[^0-9]/g, ''),
+      economic_activity_code: activityCode,
       economic_activity_name: form.economic_activity_name.trim() || null,
       province_code: provinceCode,
       canton_code: cantonCode,
@@ -110,7 +119,7 @@ export default function FiscalSettings({ workshop, role }) {
           <label>Nombre o razón social<input disabled={!canEdit} required value={form.issuer_name} onChange={event => update('issuer_name', event.target.value)} /></label>
           <label>Tipo de identificación<select disabled={!canEdit} value={form.identification_type} onChange={event => update('identification_type', event.target.value)}><option value="01">Cédula física</option><option value="02">Cédula jurídica</option><option value="03">DIMEX</option><option value="04">NITE</option></select></label>
           <label>Número de identificación<input disabled={!canEdit} required inputMode="numeric" value={form.identification_number} onChange={event => update('identification_number', event.target.value)} /></label>
-          <label>Código de actividad económica<input disabled={!canEdit} required inputMode="numeric" value={form.economic_activity_code} onChange={event => update('economic_activity_code', event.target.value)} /></label>
+          <label>Código de actividad económica<input disabled={!canEdit} required inputMode="decimal" value={form.economic_activity_code} onChange={event => update('economic_activity_code', event.target.value.replace(/[^0-9.]/g, '').slice(0, 7))} /><small>Puedes escribirlo como 4540.0; HCM lo convertirá al formato de Hacienda.</small></label>
           <label>Nombre de la actividad<input disabled={!canEdit} value={form.economic_activity_name} onChange={event => update('economic_activity_name', event.target.value)} /></label>
           <label>Provincia<select disabled={!canEdit} required value={form.province_code} onChange={event => updateLocation('province', event.target.value)}><option value="">Selecciona la provincia</option>{locations.map(item => <option key={item.code} value={item.code}>{item.name}</option>)}</select></label>
           <label>Cantón<select disabled={!canEdit || !selectedProvince} required value={form.canton_code} onChange={event => updateLocation('canton', event.target.value)}><option value="">Selecciona el cantón</option>{selectedProvince?.cantons.map(item => <option key={item.code} value={item.code}>{item.name}</option>)}</select></label>
