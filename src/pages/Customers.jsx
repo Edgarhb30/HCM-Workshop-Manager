@@ -19,6 +19,9 @@ const emptyForm = {
   full_name: '',
   phone: '',
   email: '',
+  fiscal_identification_type: '',
+  fiscal_identification_number: '',
+  fiscal_economic_activity_code: '',
   notes: ''
 }
 
@@ -64,6 +67,9 @@ export default function Customers({ role, workshop }) {
       full_name: form.full_name.trim(),
       phone: form.phone.trim(),
       email: form.email.trim() || null,
+      fiscal_identification_type: form.fiscal_identification_type || null,
+      fiscal_identification_number: form.fiscal_identification_number.replace(/[^0-9]/g, '') || null,
+      fiscal_economic_activity_code: form.fiscal_economic_activity_code.replace(/[^0-9]/g, '') || null,
       notes: form.notes.trim() || null
     })
 
@@ -81,6 +87,9 @@ export default function Customers({ role, workshop }) {
       full_name: customer.full_name || '',
       phone: customer.phone || '',
       email: customer.email || '',
+      fiscal_identification_type: customer.fiscal_identification_type || '',
+      fiscal_identification_number: customer.fiscal_identification_number || '',
+      fiscal_economic_activity_code: customer.fiscal_economic_activity_code || '',
       notes: customer.notes || ''
     })
     setLoadingDetail(true)
@@ -134,6 +143,9 @@ export default function Customers({ role, workshop }) {
         full_name: editForm.full_name.trim(),
         phone: editForm.phone.trim(),
         email: editForm.email.trim() || null,
+        fiscal_identification_type: editForm.fiscal_identification_type || null,
+        fiscal_identification_number: editForm.fiscal_identification_number.replace(/[^0-9]/g, '') || null,
+        fiscal_economic_activity_code: editForm.fiscal_economic_activity_code.replace(/[^0-9]/g, '') || null,
         notes: editForm.notes.trim() || null
       })
       .eq('id', selected.id)
@@ -199,6 +211,9 @@ export default function Customers({ role, workshop }) {
             <label>Nombre<input required value={form.full_name} onChange={event => setForm({ ...form, full_name: event.target.value })} /></label>
             <label>Teléfono<input required value={form.phone} onChange={event => setForm({ ...form, phone: event.target.value })} /></label>
             <label>Correo<input type="email" value={form.email} onChange={event => setForm({ ...form, email: event.target.value })} /></label>
+            <label>Tipo de identificación fiscal<select value={form.fiscal_identification_type} onChange={event => setForm({ ...form, fiscal_identification_type: event.target.value })}><option value="">No registrar todavía</option><option value="01">Cédula física</option><option value="02">Cédula jurídica</option><option value="03">DIMEX</option><option value="04">NITE</option></select></label>
+            <label>Número de identificación<input inputMode="numeric" value={form.fiscal_identification_number} onChange={event => setForm({ ...form, fiscal_identification_number: event.target.value.replace(/[^0-9]/g, '') })} /></label>
+            <label>Código de actividad del receptor<input inputMode="numeric" maxLength="6" value={form.fiscal_economic_activity_code} onChange={event => setForm({ ...form, fiscal_economic_activity_code: event.target.value.replace(/[^0-9]/g, '').slice(0, 6) })} /><small>Solo si el cliente lo necesita para crédito fiscal o gasto deducible.</small></label>
             <label className="wide">Notas<textarea value={form.notes} onChange={event => setForm({ ...form, notes: event.target.value })} /></label>
             <button className="primary" disabled={saving}>{saving ? 'Guardando...' : 'Guardar cliente'}</button>
           </form>
@@ -263,6 +278,15 @@ export default function Customers({ role, workshop }) {
                 </label>
                 <label>Correo
                   <input type="email" value={editForm.email} onChange={event => setEditForm({ ...editForm, email: event.target.value })} />
+                </label>
+                <label>Tipo de identificación fiscal
+                  <select value={editForm.fiscal_identification_type} onChange={event => setEditForm({ ...editForm, fiscal_identification_type: event.target.value })}><option value="">No registrado</option><option value="01">Cédula física</option><option value="02">Cédula jurídica</option><option value="03">DIMEX</option><option value="04">NITE</option></select>
+                </label>
+                <label>Número de identificación
+                  <input inputMode="numeric" value={editForm.fiscal_identification_number} onChange={event => setEditForm({ ...editForm, fiscal_identification_number: event.target.value.replace(/[^0-9]/g, '') })} />
+                </label>
+                <label>Código de actividad del receptor
+                  <input inputMode="numeric" maxLength="6" value={editForm.fiscal_economic_activity_code} onChange={event => setEditForm({ ...editForm, fiscal_economic_activity_code: event.target.value.replace(/[^0-9]/g, '').slice(0, 6) })} />
                 </label>
                 <label className="wide">Notas
                   <textarea value={editForm.notes} onChange={event => setEditForm({ ...editForm, notes: event.target.value })} />
