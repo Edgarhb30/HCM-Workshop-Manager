@@ -76,6 +76,7 @@ export default function FiscalSettings({ workshop, role }) {
     if (!/^[0-9]{6}$/.test(activityCode)) return alert('La actividad económica debe tener 6 dígitos. Puedes escribir 4540.0 y HCM la convertirá automáticamente.')
 
     setSaving(true)
+    setSaved(false)
     const payload = {
       workshop_id: workshop.id,
       environment: form.environment,
@@ -100,11 +101,27 @@ export default function FiscalSettings({ workshop, role }) {
       enabled: false,
       updated_at: new Date().toISOString()
     }
-    const { data, error } = await supabase.from('fiscal_settings').upsert(payload, { onConflict: 'workshop_id' }).select().single()
-    setSaving(false)
-    if (error) return alert(`No se pudo guardar: ${error.message}`)
-    setForm({ ...emptyForm, ...data })
-    setSaved(true)
+    try {
+      const request = supabase
+        .from('fiscal_settings')
+        .update(payload)
+        .eq('workshop_id', workshop.id)
+        .select()
+        .single()
+        .abortSignal(AbortSignal.timeout(15000))
+
+      const { data, error } = await request
+      if (error) throw error
+      setForm({ ...emptyForm, ...data })
+      setSaved(true)
+    } catch (error) {
+      const timedOut = error?.name === 'TimeoutError' || error?.name === 'AbortError'
+      alert(timedOut
+        ? 'Supabase tardó demasiado en responder. Actualiza la página y comprueba si el dato quedó guardado.'
+        : `No se pudo guardar: ${error?.message || 'Error desconocido'}`)
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (loading) return <section className="panel settings-section"><div className="empty">Cargando configuración fiscal…</div></section>
