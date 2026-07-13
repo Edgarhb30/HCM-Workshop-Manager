@@ -244,6 +244,13 @@
 .fiscal-preview-result.ready { color: #17643b; background: #e8f7ef; border: 1px solid #9cd7b8; }
 .fiscal-preview-result.pending { color: #6d4a00; background: #fff7df; border: 1px solid #e1c66b; }
 .fiscal-preview-result ul { margin: 4px 0 0; padding-left: 20px; }
+.cabys-search { display: grid; gap: 10px; margin-top: 5px; padding-top: 14px; border-top: 1px solid var(--brand-border, #30363c); }
+.cabys-search h4 { margin: 0; }
+.cabys-search-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.cabys-results { display: grid; gap: 7px; max-height: 330px; overflow: auto; }
+.cabys-results button { display: grid; gap: 3px; padding: 11px; text-align: left; color: var(--brand-text, #1d1d1f); background: var(--brand-panel, #fff); border: 1px solid var(--brand-border, #d2d2d7); border-radius: 9px; cursor: pointer; }
+.cabys-results button:hover { border-color: var(--brand-accent, #222); }
+.cabys-results span, .cabys-results small { color: var(--brand-muted, #6e6e73); }
 .report-filters { display: grid; grid-template-columns: 180px 180px auto; gap: 12px; align-items: end; background: #111417; border: 1px solid #30363c; border-radius: 12px; padding: 14px; margin-bottom: 17px; }
 .report-filters label { display: grid; gap: 6px; color: #bec5cb; font-size: .82rem; font-weight: 650; }
 .report-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 11px; margin-bottom: 17px; }

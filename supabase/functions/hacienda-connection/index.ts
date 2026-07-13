@@ -42,10 +42,27 @@ Deno.serve(async req => {
       .select('workshop_id, role, active')
       .eq('user_id', userResult.user.id)
       .eq('active', true)
-      .in('role', action === 'preview' ? ['owner', 'admin', 'reception'] : ['owner', 'admin'])
+      .in('role', ['preview', 'cabys_search'].includes(action) ? ['owner', 'admin', 'reception'] : ['owner', 'admin'])
       .limit(1)
       .maybeSingle()
     if (membershipError || !membership) return json({ error: 'No tienes permiso para realizar esta operación fiscal' }, 403)
+
+    if (action === 'cabys_search') {
+      const query = String(requestBody?.query || '').trim()
+      if (query.length < 3) return json({ error: 'Escribe al menos tres letras para buscar' }, 400)
+      const response = await fetch(`https://api.hacienda.go.cr/fe/cabys?q=${encodeURIComponent(query)}&top=12`)
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) return json({ error: 'El catálogo oficial CABYS no respondió' }, 502)
+      return json({
+        ok: true,
+        results: (result.cabys || []).map((item: Record<string, unknown>) => ({
+          code: item.codigo,
+          description: item.descripcion,
+          tax_rate: Number(item.impuesto || 0),
+          category: Array.isArray(item.categorias) ? item.categorias.at(-2) || item.categorias.at(-1) || '' : ''
+        }))
+      })
+    }
 
     if (action === 'preview') {
       const invoiceId = String(requestBody?.invoice_id || '')

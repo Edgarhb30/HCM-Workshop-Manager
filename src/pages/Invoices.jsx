@@ -46,6 +46,10 @@ export default function Invoices({ workshop = null, branding = null, role }) {
   const [fiscalType, setFiscalType] = useState('04')
   const [checkingFiscal, setCheckingFiscal] = useState(false)
   const [fiscalPreview, setFiscalPreview] = useState(null)
+  const [cabysItemId, setCabysItemId] = useState('')
+  const [cabysQuery, setCabysQuery] = useState('')
+  const [cabysResults, setCabysResults] = useState([])
+  const [searchingCabys, setSearchingCabys] = useState(false)
   const [payment, setPayment] = useState({
     amount: '',
     payment_method: 'SINPE',
@@ -125,6 +129,9 @@ export default function Invoices({ workshop = null, branding = null, role }) {
     setSelected(invoice)
     setFiscalType(invoice.work_order?.customer?.fiscal_identification_number ? '01' : '04')
     setFiscalPreview(null)
+    setCabysItemId(invoice.items?.find(item => !item.cabys_code)?.id || invoice.items?.[0]?.id || '')
+    setCabysQuery(invoice.items?.find(item => !item.cabys_code)?.description || '')
+    setCabysResults([])
     setPayment({
       amount: balance > 0 ? String(balance) : '',
       payment_method: 'SINPE',
@@ -143,6 +150,35 @@ export default function Invoices({ workshop = null, branding = null, role }) {
     setCheckingFiscal(false)
     if (error || !data?.ok) return alert(data?.error || error?.message || 'No fue posible revisar el borrador fiscal.')
     setFiscalPreview(data)
+  }
+
+  async function searchCabys(event) {
+    event.preventDefault()
+    if (cabysQuery.trim().length < 3) return alert('Escribe al menos tres letras para buscar.')
+    setSearchingCabys(true); setCabysResults([])
+    const { data, error } = await supabase.functions.invoke('hacienda-connection', {
+      body: { action: 'cabys_search', query: cabysQuery.trim() }
+    })
+    setSearchingCabys(false)
+    if (error || !data?.ok) return alert(data?.error || error?.message || 'No fue posible consultar CABYS.')
+    setCabysResults(data.results || [])
+  }
+
+  async function chooseCabys(result) {
+    if (!cabysItemId) return alert('Selecciona primero la línea de la factura.')
+    const taxRateCodes = { 0: '01', 0.5: '09', 1: '02', 2: '03', 4: '04', 8: '07', 13: '08' }
+    const { error } = await supabase.from('invoice_items').update({
+      cabys_code: result.code,
+      fiscal_tax_rate: result.tax_rate,
+      tax_rate_code: taxRateCodes[result.tax_rate] || '08'
+    }).eq('id', cabysItemId)
+    if (error) return alert(`No se pudo guardar el CABYS: ${error.message}`)
+    const updated = await fetchInvoice(selected.id)
+    if (updated) {
+      setInvoices(current => current.map(item => item.id === updated.id ? updated : item))
+      openInvoice(updated)
+      alert(`CABYS ${result.code} guardado correctamente.`)
+    }
   }
 
   async function registerPayment(event) {
@@ -329,6 +365,12 @@ export default function Invoices({ workshop = null, branding = null, role }) {
                 <span>{fiscalPreview.document_name} · {fiscalPreview.line_count} líneas · {money(fiscalPreview.total)}</span>
                 {!!fiscalPreview.missing?.length && <ul>{fiscalPreview.missing.map(item => <li key={item}>{item}</li>)}</ul>}
               </div>}
+              <form className="cabys-search" onSubmit={searchCabys}>
+                <h4>Buscador oficial CABYS</h4>
+                <label>Línea de la factura<select value={cabysItemId} onChange={event => setCabysItemId(event.target.value)}>{(selected.items || []).map(item => <option key={item.id} value={item.id}>{item.description} {item.cabys_code ? `· ${item.cabys_code}` : '· sin CABYS'}</option>)}</select></label>
+                <div className="cabys-search-row"><input value={cabysQuery} onChange={event => setCabysQuery(event.target.value)} placeholder="Ejemplo: mantenimiento motocicleta" /><button className="secondary compact" disabled={searchingCabys}>{searchingCabys ? 'Buscando…' : 'Buscar CABYS'}</button></div>
+                {!!cabysResults.length && <div className="cabys-results">{cabysResults.map(result => <button type="button" key={result.code} onClick={() => chooseCabys(result)}><strong>{result.description}</strong><span>{result.code} · IVA {result.tax_rate}%</span>{result.category && <small>{result.category}</small>}</button>)}</div>}
+              </form>
             </section>}
 
             {canManage && !['Pagada', 'Anulada'].includes(selected.status) && (
