@@ -25,9 +25,9 @@ const invoiceSelect = `
   *,
   items:invoice_items(*),
   payments:invoice_payments(*),
-  work_order:work_orders(
+    work_order:work_orders(
     order_number,
-    customer:customers(full_name, phone, email),
+    customer:customers(full_name, phone, email, fiscal_identification_type, fiscal_identification_number, fiscal_economic_activity_code),
     motorcycle:motorcycles(brand, model, plate)
   ),
   quote:quotes(quote_number)
@@ -43,6 +43,9 @@ export default function Invoices({ workshop = null, branding = null, role }) {
   const [selected, setSelected] = useState(null)
   const [creating, setCreating] = useState(false)
   const [savingPayment, setSavingPayment] = useState(false)
+  const [fiscalType, setFiscalType] = useState('04')
+  const [checkingFiscal, setCheckingFiscal] = useState(false)
+  const [fiscalPreview, setFiscalPreview] = useState(null)
   const [payment, setPayment] = useState({
     amount: '',
     payment_method: 'SINPE',
@@ -120,12 +123,26 @@ export default function Invoices({ workshop = null, branding = null, role }) {
   function openInvoice(invoice) {
     const balance = Number(invoice.total) - Number(invoice.amount_paid)
     setSelected(invoice)
+    setFiscalType(invoice.work_order?.customer?.fiscal_identification_number ? '01' : '04')
+    setFiscalPreview(null)
     setPayment({
       amount: balance > 0 ? String(balance) : '',
       payment_method: 'SINPE',
       reference: '',
       notes: ''
     })
+  }
+
+  async function checkFiscalDraft() {
+    if (!selected) return
+    setCheckingFiscal(true)
+    setFiscalPreview(null)
+    const { data, error } = await supabase.functions.invoke('hacienda-connection', {
+      body: { action: 'preview', invoice_id: selected.id, document_type: fiscalType }
+    })
+    setCheckingFiscal(false)
+    if (error || !data?.ok) return alert(data?.error || error?.message || 'No fue posible revisar el borrador fiscal.')
+    setFiscalPreview(data)
   }
 
   async function registerPayment(event) {
@@ -296,6 +313,23 @@ export default function Invoices({ workshop = null, branding = null, role }) {
             </div>
 
             <button className="print-document-action" type="button" onClick={() => printInvoiceDocument({ invoice: selected, workshop, branding })}><Printer size={18} />Imprimir factura / Guardar PDF</button>
+
+            {canManage && selected.status !== 'Anulada' && <section className="fiscal-draft-check">
+              <h3>Comprobante electrónico</h3>
+              <p className="muted">Revisión previa. No envía a Hacienda ni consume consecutivo.</p>
+              <label>Tipo de comprobante
+                <select value={fiscalType} onChange={event => { setFiscalType(event.target.value); setFiscalPreview(null) }}>
+                  <option value="04">Tiquete electrónico · consumidor final</option>
+                  <option value="01">Factura electrónica · cliente identificado</option>
+                </select>
+              </label>
+              <button className="secondary compact" type="button" disabled={checkingFiscal} onClick={checkFiscalDraft}><FileCheck2 size={17} />{checkingFiscal ? 'Revisando…' : 'Revisar borrador fiscal'}</button>
+              {fiscalPreview && <div className={`fiscal-preview-result ${fiscalPreview.ready ? 'ready' : 'pending'}`}>
+                <strong>{fiscalPreview.message}</strong>
+                <span>{fiscalPreview.document_name} · {fiscalPreview.line_count} líneas · {money(fiscalPreview.total)}</span>
+                {!!fiscalPreview.missing?.length && <ul>{fiscalPreview.missing.map(item => <li key={item}>{item}</li>)}</ul>}
+              </div>}
+            </section>}
 
             {canManage && !['Pagada', 'Anulada'].includes(selected.status) && (
               <form className="payment-form" onSubmit={registerPayment}>
