@@ -10,6 +10,8 @@ export default function FiscalCredentials({ role, configured, onConfigured }) {
   const [keyBase64, setKeyBase64] = useState('')
   const [fileName, setFileName] = useState('')
   const [saving, setSaving] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [connectionOk, setConnectionOk] = useState(false)
 
   function selectKey(event) {
     const file = event.target.files?.[0]
@@ -42,10 +44,19 @@ export default function FiscalCredentials({ role, configured, onConfigured }) {
     alert('Credenciales fiscales cifradas correctamente.')
   }
 
+  async function testConnection() {
+    setTesting(true); setConnectionOk(false)
+    const { data, error } = await supabase.functions.invoke('hacienda-connection', { body: { action: 'test' } })
+    setTesting(false)
+    if (error || !data?.ok) return alert(data?.error || error?.message || 'No fue posible conectar con Hacienda.')
+    setConnectionOk(true)
+  }
+
   return (
     <div className="fiscal-credentials">
       <div className="fiscal-credentials-title"><LockKeyhole size={20} /><div><strong>Conexión segura con Hacienda</strong><span>{configured ? 'Credenciales y firma configuradas' : 'Pendiente de configurar'}</span></div></div>
       {configured && <p className="fiscal-configured"><KeyRound size={18} />La caja fuerte fiscal está lista. Solo reemplaza estos datos si Hacienda genera credenciales nuevas.</p>}
+      {configured && <div className="fiscal-connection-actions"><button type="button" className="secondary compact" disabled={testing} onClick={testConnection}><KeyRound size={17} />{testing ? 'Probando conexión…' : 'Probar conexión con Hacienda'}</button>{connectionOk && <span className="settings-saved">Conexión verificada</span>}</div>}
       {canEdit && <div className="settings-fields">
         <label>Usuario de API de Hacienda<input autoComplete="off" value={username} onChange={event => setUsername(event.target.value)} /></label>
         <label>Contraseña de API<input type="password" autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} /></label>

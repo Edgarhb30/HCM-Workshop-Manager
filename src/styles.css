@@ -8,3 +8,4 @@
 .fiscal-configured{display:flex;gap:.55rem;align-items:center;padding:.75rem;border-radius:10px;background:#e9f8ef;color:#176337}
 .fiscal-file-input{position:relative;display:flex;gap:.5rem;align-items:center;min-height:42px;padding:.65rem .8rem;border:1px solid var(--border);border-radius:10px;cursor:pointer;overflow:hidden}
 .fiscal-file-input input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.fiscal-connection-actions{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;margin:.8rem 0}
