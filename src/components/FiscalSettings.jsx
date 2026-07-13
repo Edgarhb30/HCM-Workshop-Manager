@@ -102,17 +102,13 @@ export default function FiscalSettings({ workshop, role }) {
       updated_at: new Date().toISOString()
     }
     try {
-      const request = supabase
-        .from('fiscal_settings')
-        .update(payload)
-        .eq('workshop_id', workshop.id)
-        .select()
-        .single()
-        .abortSignal(AbortSignal.timeout(15000))
-
-      const { data, error } = await request
-      if (error) throw error
-      setForm({ ...emptyForm, ...data })
+      const request = supabase.functions.invoke('hacienda-connection', {
+        body: { action: 'save_fiscal_settings', settings: payload }
+      })
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new DOMException('Tiempo agotado', 'TimeoutError')), 15000))
+      const { data, error } = await Promise.race([request, timeout])
+      if (error || !data?.ok) throw new Error(data?.error || error?.message || 'El servidor no confirmó el guardado')
+      setForm({ ...emptyForm, ...data.settings })
       setSaved(true)
     } catch (error) {
       const timedOut = error?.name === 'TimeoutError' || error?.name === 'AbortError'
@@ -128,7 +124,7 @@ export default function FiscalSettings({ workshop, role }) {
 
   return (
     <section className="panel settings-section fiscal-settings">
-      <div className="settings-section-title"><Landmark size={22} /><div><h3>Facturación electrónica Costa Rica</h3><p>Datos para comprobantes electrónicos versión 4.4</p></div></div>
+      <div className="settings-section-title"><Landmark size={22} /><div><h3>Facturación electrónica Costa Rica</h3><p>Datos para comprobantes electrónicos versión 4.4 · fiscal-2</p></div></div>
       <div className="fiscal-security-note"><ShieldCheck size={19} /><span>La contraseña de Hacienda, el PIN y la llave .p12 se configurarán en el servidor seguro; nunca se guardan en esta pantalla.</span></div>
       <div className="fiscal-form">
         <div className="settings-fields">

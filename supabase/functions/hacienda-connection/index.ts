@@ -47,6 +47,46 @@ Deno.serve(async req => {
       .maybeSingle()
     if (membershipError || !membership) return json({ error: 'No tienes permiso para realizar esta operación fiscal' }, 403)
 
+    if (action === 'save_fiscal_settings') {
+      const input = requestBody?.settings || {}
+      const activityCode = String(input.economic_activity_code || '').replace(/\D/g, '')
+      if (!/^\d{6}$/.test(activityCode)) return json({ error: 'La actividad económica debe tener 6 dígitos' }, 400)
+      const payload = {
+        environment: ['test', 'production'].includes(input.environment) ? input.environment : 'test',
+        issuer_name: String(input.issuer_name || '').trim(),
+        identification_type: String(input.identification_type || ''),
+        identification_number: String(input.identification_number || '').replace(/\D/g, ''),
+        economic_activity_code: activityCode,
+        economic_activity_name: String(input.economic_activity_name || '').trim() || null,
+        province_code: String(input.province_code || ''),
+        canton_code: String(input.canton_code || '').padStart(2, '0'),
+        district_code: String(input.district_code || '').padStart(2, '0'),
+        neighborhood_code: input.neighborhood_code ? String(input.neighborhood_code).padStart(2, '0') : null,
+        other_signs: String(input.other_signs || '').trim(),
+        phone_country_code: String(input.phone_country_code || '').replace(/\D/g, ''),
+        phone_number: String(input.phone_number || '').replace(/\D/g, ''),
+        email: String(input.email || '').trim().toLowerCase(),
+        branch_code: String(input.branch_code || '').padStart(3, '0'),
+        terminal_code: String(input.terminal_code || '').padStart(5, '0'),
+        last_invoice_consecutive: Number(input.last_invoice_consecutive || 0),
+        default_labor_cabys: String(input.default_labor_cabys || '').replace(/\D/g, '') || null,
+        default_parts_cabys: String(input.default_parts_cabys || '').replace(/\D/g, '') || null,
+        enabled: false,
+        updated_at: new Date().toISOString()
+      }
+      if (!payload.issuer_name || !payload.identification_number || !payload.other_signs || !payload.email) {
+        return json({ error: 'Faltan datos fiscales obligatorios del taller' }, 400)
+      }
+      const { data, error } = await admin
+        .from('fiscal_settings')
+        .update(payload)
+        .eq('workshop_id', membership.workshop_id)
+        .select()
+        .single()
+      if (error) return json({ error: `No se pudo guardar: ${error.message}` }, 400)
+      return json({ ok: true, settings: data, version: '1.1.0-fiscal-2' })
+    }
+
     if (action === 'cabys_search') {
       const query = String(requestBody?.query || '').trim()
       if (query.length < 3) return json({ error: 'Escribe al menos tres letras para buscar' }, 400)
