@@ -60,10 +60,10 @@ export default function FiscalSettings({ workshop, role }) {
 
   async function save() {
     if (!canEdit) return
-    const provinceCode = form.province_code.replace(/[^0-9]/g, '')
-    const cantonDigits = form.canton_code.replace(/[^0-9]/g, '')
-    const districtDigits = form.district_code.replace(/[^0-9]/g, '')
-    const neighborhoodDigits = form.neighborhood_code.replace(/[^0-9]/g, '')
+    const provinceCode = String(form.province_code || '').replace(/[^0-9]/g, '')
+    const cantonDigits = String(form.canton_code || '').replace(/[^0-9]/g, '')
+    const districtDigits = String(form.district_code || '').replace(/[^0-9]/g, '')
+    const neighborhoodDigits = String(form.neighborhood_code || '').replace(/[^0-9]/g, '')
     const cantonCode = cantonDigits ? cantonDigits.padStart(2, '0') : ''
     const districtCode = districtDigits ? districtDigits.padStart(2, '0') : ''
     const neighborhoodCode = neighborhoodDigits ? neighborhoodDigits.padStart(2, '0') : null
@@ -82,7 +82,7 @@ export default function FiscalSettings({ workshop, role }) {
       environment: form.environment,
       issuer_name: form.issuer_name.trim(),
       identification_type: form.identification_type,
-      identification_number: form.identification_number.replace(/[^0-9]/g, ''),
+      identification_number: String(form.identification_number || '').replace(/[^0-9]/g, ''),
       economic_activity_code: activityCode,
       economic_activity_name: form.economic_activity_name.trim() || null,
       province_code: provinceCode,
@@ -90,14 +90,14 @@ export default function FiscalSettings({ workshop, role }) {
       district_code: districtCode,
       neighborhood_code: neighborhoodCode,
       other_signs: form.other_signs.trim(),
-      phone_country_code: form.phone_country_code.replace(/[^0-9]/g, ''),
-      phone_number: form.phone_number.replace(/[^0-9]/g, ''),
+      phone_country_code: String(form.phone_country_code || '').replace(/[^0-9]/g, ''),
+      phone_number: String(form.phone_number || '').replace(/[^0-9]/g, ''),
       email: form.email.trim().toLowerCase(),
       branch_code: form.branch_code.padStart(3, '0'),
       terminal_code: form.terminal_code.padStart(5, '0'),
       last_invoice_consecutive: Number(form.last_invoice_consecutive || 0),
-      default_labor_cabys: form.default_labor_cabys.replace(/[^0-9]/g, '') || null,
-      default_parts_cabys: form.default_parts_cabys.replace(/[^0-9]/g, '') || null,
+      default_labor_cabys: String(form.default_labor_cabys || '').replace(/[^0-9]/g, '') || null,
+      default_parts_cabys: String(form.default_parts_cabys || '').replace(/[^0-9]/g, '') || null,
       enabled: false,
       updated_at: new Date().toISOString()
     }
@@ -122,7 +122,7 @@ export default function FiscalSettings({ workshop, role }) {
 
   return (
     <section className="panel settings-section fiscal-settings">
-      <div className="settings-section-title"><Landmark size={22} /><div><h3>Facturación electrónica Costa Rica</h3><p>Datos para comprobantes electrónicos versión 4.4 · fiscal-3</p></div></div>
+      <div className="settings-section-title"><Landmark size={22} /><div><h3>Facturación electrónica Costa Rica</h3><p>Datos para comprobantes electrónicos versión 4.4 · fiscal-4</p></div></div>
       <div className="fiscal-security-note"><ShieldCheck size={19} /><span>La contraseña de Hacienda, el PIN y la llave .p12 se configurarán en el servidor seguro; nunca se guardan en esta pantalla.</span></div>
       <div className="fiscal-form">
         <div className="settings-fields">
