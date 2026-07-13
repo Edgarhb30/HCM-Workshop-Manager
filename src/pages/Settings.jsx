@@ -150,8 +150,7 @@ export default function Settings({ workshop, role, onWorkshopUpdated, onBranding
     }))
   }
 
-  async function save(event) {
-    event.preventDefault()
+  async function save() {
     if (!canEdit) return
     setSaving(true)
     setSaved(false)
@@ -225,7 +224,7 @@ export default function Settings({ workshop, role, onWorkshopUpdated, onBranding
   if (loading) return <section className="panel"><div className="empty">Cargando configuración...</div></section>
 
   return (
-    <form className="settings-page" onSubmit={save}>
+    <div className="settings-page">
       <section className="panel settings-heading">
         <div>
           <span className="eyebrow">CONFIGURACIÓN</span>
@@ -234,7 +233,7 @@ export default function Settings({ workshop, role, onWorkshopUpdated, onBranding
         </div>
         <div className="settings-actions">
           {saved && <span className="settings-saved"><CheckCircle2 size={17} />Guardado</span>}
-          <button className="primary compact" disabled={!canEdit || saving}><Save size={18} />{saving ? 'Guardando...' : 'Guardar cambios'}</button>
+          <button type="button" className="primary compact" disabled={!canEdit || saving} onClick={save}><Save size={18} />{saving ? 'Guardando...' : 'Guardar cambios generales'}</button>
         </div>
       </section>
 
@@ -316,6 +315,6 @@ export default function Settings({ workshop, role, onWorkshopUpdated, onBranding
       </section>
       <FiscalSettings workshop={workshop} role={role} />
       {canEdit && <DataBackup workshop={workshop} />}
-    </form>
+    </div>
   )
 }
